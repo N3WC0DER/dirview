@@ -105,10 +105,17 @@ jobs:
 
     # --- ЗАПОЛНЕНИЕ DEBIAN/CHANGELOG ---
     - name: Update Debian Changelog
+      shell: bash
       run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+        # Преобразуем версию в формат, валидный для Debian (заменяем -rc.X на ~rcX, убираем префикс 'v')
+        DEB_VERSION=$(echo "${{ env.VERSION }}" | sed 's/^v//' | sed 's/-rc\./~rc/')
+        echo "Valid Debian version to use: $DEB_VERSION"
+
         mkdir -p debian
         if [ ! -f debian/changelog ]; then
-          dch --create --package "dirview" -v "${{ env.VERSION }}" "Initial release"
+          dch --create --package "dirview" -v "$DEB_VERSION" "Initial release"
         else
           # Собираем логи коммитов со времени предыдущего релиза
           LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
@@ -117,13 +124,16 @@ jobs:
           else
             COMMIT_LOGS=$(git log -5 --oneline | tr '\n' '; ')
           fi
-          dch -v "${{ env.VERSION }}" "Automated release build. Commits: ${COMMIT_LOGS}"
+          dch -v "$DEB_VERSION" "Automated release build. Commits: ${COMMIT_LOGS}"
         fi
         cat debian/changelog
 
     # --- ГЕНЕРАЦИЯ .PATCH ФАЙЛОВ ---
     - name: Generate Patch Files
+      shell: bash
       run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
         # Очищаем старые патчи перед генерацией новых
         rm -rf patches/
         mkdir -p patches/
@@ -141,7 +151,10 @@ jobs:
     # --- КОММИТ И ПУШ CHANGELOG И ПАТЧЕЙ В РЕПОЗИТОРИЙ ---
     - name: Commit and Push Changelog & Patches to Master
       if: github.ref == 'refs/heads/master' # Делаем коммит только при реальном мердже в master
+      shell: bash
       run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@://github.com'
         
@@ -161,6 +174,7 @@ jobs:
 
     # --- СБОРКА .DEB ПАКЕТА ---
     - name: Build Debian Package
+      shell: bash
       run: |
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
         cmake --build build
