@@ -1,0 +1,183 @@
+name: dirview CI/CD pipeline
+
+on:
+  # 1. Запуск проверок при создании PR в master (до мерджа)
+  pull_request:
+    branches: [ master ]
+  # 2. Запуск релиза при пуше релиз-кандидатов (например, v1.0.0-rc.1)
+  push:
+    tags:
+      - 'v*.*.*-rc.*'
+
+jobs:
+  # --- СБОРКА И ЛИНТЕР (РАБОТАЕТ ВСЕГДА: И В PR, И ПРИ ТЕГАХ) ---
+  build-and-lint:
+    name: Build & Lint (Astra Linux Environment)
+    runs-on: ubuntu-latest
+    container:
+      image: debian:11-slim # Для Astra Linux SE 1.7 используется база Debian 11
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Astra Linux System Dependencies
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          build-essential \
+          cmake \
+          clang-tidy \
+          clazy \
+          qtbase5-dev \
+          qtchooser \
+          qt5-qmake \
+          qtbase5-dev-tools \
+          git
+
+    - name: Configure CMake with Linters
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    - name: Run Linters & Build Project
+      run: cmake --build build --config Release
+
+  # --- РЕЛИЗ, ПАТЧИ, CHANGELOG, DEB-ПАКЕТ (ТОЛЬКО ПРИ МЕРДЖЕ / ТЕГЕ RC) ---
+  release-and-package:
+    name: Generate Package & Release
+    needs: build-and-lint
+    # Запускаем только если это мердж в master (push в master) ИЛИ релиз-тег
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    container:
+      image: debian:11-slim
+    permissions:
+      contents: write # Дает право боту делать коммиты, теги и создавать релизы
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Важно для генерации changelog и патчей (нужна вся история)
+
+    - name: Install Debian Packaging Tools
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          build-essential cmake qtbase5-dev qtbase5-dev-tools git dpkg-dev debhelper devscripts
+
+    # --- АВТО-ТЕГ И ОПРЕДЕЛЕНИЕ ВЕРСИИ ---
+    # Если это мердж в master без тега, вычисляем версию и ставим чистый тег без -rc
+    - name: Determine Version and Create Release Tag
+      id: versioning
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@://github.com'
+        
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # Если запуск по тегу rc, берем его как есть
+          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "tag_created=false" >> $GITHUB_OUTPUT
+        else
+          # Если это мердж в master, ищем последний rc-тег, убираем из него "-rc.*"
+          LAST_RC_TAG=$(git describe --tags --abbrev=0 --match "v*.*.*-rc.*" 2>/dev/null || echo "v1.0.0-rc.1")
+          CLEAN_VERSION=$(echo "$LAST_RC_TAG" | sed -E 's/-rc\.[0-9]+//')
+          
+          echo "VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+          
+          # Проверяем, существует ли уже такой тег в репозитории
+          if ! git rev-parse "$CLEAN_VERSION" >/dev/null 2>&1; then
+            # Ставим тег локально и пушим с [skip ci], чтобы не вызвать повторный конвейер
+            git tag "$CLEAN_VERSION"
+            git push origin "$CLEAN_VERSION"
+            echo "tag_created=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $CLEAN_VERSION already exists."
+            echo "tag_created=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    # --- ЗАПОЛНЕНИЕ DEBIAN/CHANGELOG ---
+    - name: Update Debian Changelog
+      run: |
+        mkdir -p debian
+        if [ ! -f debian/changelog ]; then
+          dch --create --package "dirview" -v "${{ env.VERSION }}" "Initial release"
+        else
+          # Собираем логи коммитов со времени предыдущего релиза
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMIT_LOGS=$(git log ${LAST_TAG}..HEAD --oneline | tr '\n' '; ')
+          else
+            COMMIT_LOGS=$(git log -5 --oneline | tr '\n' '; ')
+          fi
+          dch -v "${{ env.VERSION }}" "Automated release build. Commits: ${COMMIT_LOGS}"
+        fi
+        cat debian/changelog
+
+    # --- ГЕНЕРАЦИЯ .PATCH ФАЙЛОВ ---
+    - name: Generate Patch Files
+      run: |
+        # Очищаем старые патчи перед генерацией новых
+        rm -rf patches/
+        mkdir -p patches/
+        
+        LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          git format-patch ${LAST_TAG}..HEAD -o patches/
+        else
+          git format-patch -1 -o patches/
+        fi
+        
+        # Также делаем архив для прикрепления к релизу GitHub
+        tar -czf patches.tar.gz patches/
+
+    # --- КОММИТ И ПУШ CHANGELOG И ПАТЧЕЙ В РЕПОЗИТОРИЙ ---
+    - name: Commit and Push Changelog & Patches to Master
+      if: github.ref == 'refs/heads/master' # Делаем коммит только при реальном мердже в master
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@://github.com'
+        
+        # Индексируем изменения
+        git add debian/changelog patches/
+        
+        # Проверяем, есть ли что коммитить (чтобы избежать ошибок, если файлы не изменились)
+        if ! git diff-index --quiet HEAD; then
+          # Флаг [skip ci] в сообщении коммита критически важен, чтобы избежать бесконечного цикла сборки!
+          git commit -m "chore: update changelog and patches for ${{ env.VERSION }} [skip ci]"
+          
+          # Пушим изменения обратно в master
+          git push origin master
+        else
+          echo "No changes in changelog or patches to commit."
+        fi
+
+    # --- СБОРКА .DEB ПАКЕТА ---
+    - name: Build Debian Package
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+        cmake --build build
+        DESTDIR=$(pwd)/debian/dirview cmake --install build
+        
+        dpkg-deb --build debian/dirview
+        mv debian/dirview.deb ./dirview_${{ env.VERSION }}_amd64.deb
+
+    # --- СОЗДАНИЕ GitHub RELEASE И ЗАГРУЗКА АРТЕФАКТОВ ---
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.VERSION }}
+        name: Release ${{ env.VERSION }}
+        body: |
+          Automated Release for Astra Linux.
+          The debian package and patch archive are attached. 
+          The repository files `debian/changelog` and `patches/` have been updated on branch master.
+        draft: false
+        prerelease: ${{ contains(env.VERSION, '-rc') }}
+        files: |
+          *.deb
+          patches.tar.gz

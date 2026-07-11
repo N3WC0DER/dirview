@@ -15,8 +15,30 @@ find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
 # 3. Define source files
 set(PROJECT_SOURCES
-    main.cpp
+    src/main.cpp
 )
+
+# 3.1 Formatting
+find_program(CLANG_FORMAT_EXE clang-format)
+if(CLANG_FORMAT_EXE)
+    add_custom_target(format
+        COMMAND ${CLANG_FORMAT_EXE} -i -style=file ${ALL_CXX_FILES}
+        COMMENT "Formatting code with clang-format..."
+    )
+endif()
+
+# 3.2 Tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # Требуется для работы линтеров
+
+find_program(CLANG_TIDY_EXE clang-tidy)
+if(CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-checks=-*,bugprone-*,modernize-*,performance-*,readability-*")
+endif()
+
+find_program(CLAZY_EXE clazy)
+if(CLAZY_EXE)
+    set(CMAKE_CXX_COMPILER_LAUNCHER clazy)
+endif()
 
 # 4. Create the executable binary
 add_executable(dirview ${PROJECT_SOURCES})
