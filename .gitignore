@@ -68,4 +68,11 @@ vcpkg_installed/
 Testing/
 .cache/
 
+# trash after build .deb
 dirview_autogen
+obj-x86_64-linux-gnu
+debian/debhelper-build-stamp
+debian/dirview.substvars
+debian/files
+debian/.debhelper/
+debian/dirview/

@@ -1,0 +1,11 @@
+dirview (0.1) UNRELEASED; urgency=medium
+
+  [ Savkin Nikita ]
+  * 
+  * Initial commit
+
+  [ N3WC0DER ]
+  * init
+  * fix: switch from qmake to cmake
+
+ -- Savkin Nikita <sawkin.nik@gmail.com>  Sat, 11 Jul 2026 21:03:22 +0400

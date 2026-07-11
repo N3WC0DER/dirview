@@ -1,0 +1,11 @@
+Source: dirview
+Section: utils
+Priority: optional
+Maintainer: Savkin Nikita <sawkin.nik@gmail.com>
+Build-Depends: debhelper (>= 12), cmake, qtbase5-dev
+Standards-Version: 0.1
+
+Package: dirview
+Architecture: any
+Depends: libqt5widgets5, libqt5core5a, libqt5gui5
+Description: Просмотр дерева каталогов с домашней директории

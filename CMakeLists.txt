@@ -27,3 +27,10 @@ target_link_libraries(dirview PRIVATE
     Qt5::Gui
     Qt5::Widgets
 )
+
+include(GNUInstallDirs)
+
+install(TARGETS dirview
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
