@@ -2,7 +2,7 @@
 
 [![MIT License](https://img.shields.io/github/license/N3WC0DER/dirview)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/N3WC0DER/dirview)](https://github.com/N3WC0DER/dirview/releases)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/N3WC0DER/dirview/ci)](https://github.com)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/N3WC0DER/dirview/ci.yml)](https://github.com)
 [![Issues Open](https://img.shields.io/github/issues/N3WC0DER/dirview)](https://github.com/N3WC0DER/dirview/issues)
 ![Stars](https://img.shields.io/github/stars/N3WC0DER/dirview)
 

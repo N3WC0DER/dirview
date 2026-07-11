@@ -72,7 +72,10 @@ jobs:
     # Если это мердж в master без тега, вычисляем версию и ставим чистый тег без -rc
     - name: Determine Version and Create Release Tag
       id: versioning
+      shell: bash
       run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@://github.com'
         
