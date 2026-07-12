@@ -1,7 +1,7 @@
 From 43c187d7e5c164d1eab09d57dcf8324b5db0047b Mon Sep 17 00:00:00 2001
 From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
 Date: Sun, 12 Jul 2026 15:33:39 +0400
-Subject: [PATCH 2/2] Refactor code (#2)
+Subject: [PATCH 2/4] Refactor code (#2)
 
 ---
  CMakeLists.txt                   |  3 +++

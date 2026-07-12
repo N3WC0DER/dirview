@@ -1,0 +1,704 @@
+From a59d0e968f5dc2c38219cac54b9bf63b4fb6f610 Mon Sep 17 00:00:00 2001
+From: "github-actions[bot]" <github-actions[bot]@github.com>
+Date: Sun, 12 Jul 2026 11:36:31 +0000
+Subject: [PATCH 3/4] chore: update changelog and patches for v1.0.0 [skip ci]
+
+---
+ debian/changelog                              |   7 +
+ ...ngelog-and-patches-for-v1.0.0-skip-c.patch | 478 ++++++++++++++++++
+ debian/patches/0002-Refactor-code-2.patch     | 183 +++++++
+ 3 files changed, 668 insertions(+)
+ create mode 100644 debian/patches/0001-chore-update-changelog-and-patches-for-v1.0.0-skip-c.patch
+ create mode 100644 debian/patches/0002-Refactor-code-2.patch
+
+diff --git a/debian/changelog b/debian/changelog
+index 0d3c38e..179a5a3 100644
+--- a/debian/changelog
++++ b/debian/changelog
+@@ -1,3 +1,10 @@
++dirview (1.0.0) stable; urgency=medium
++
++  * Automated release build. Commits: 43c187d Refactor code (#2);91bc486
++    chore: update changelog and patches for v1.0.0 [skip ci];
++
++ -- MAINTAINER <runner@runnervm5mmn9.0m0ttc1u53rezk4a1umjdwegrf.phxx.internal.cloudapp.net>  Sun, 12 Jul 2026 11:36:31 +0000
++
+ dirview (1.0.0) stable; urgency=medium
+ 
+   * 
+diff --git a/debian/patches/0001-chore-update-changelog-and-patches-for-v1.0.0-skip-c.patch b/debian/patches/0001-chore-update-changelog-and-patches-for-v1.0.0-skip-c.patch
+new file mode 100644
+index 0000000..cc79f75
+--- /dev/null
++++ b/debian/patches/0001-chore-update-changelog-and-patches-for-v1.0.0-skip-c.patch
+@@ -0,0 +1,478 @@
++From 91bc486fe3e8f5d259b7221122413b1ca0d2e00f Mon Sep 17 00:00:00 2001
++From: "github-actions[bot]" <github-actions[bot]@github.com>
++Date: Sun, 12 Jul 2026 09:56:28 +0000
++Subject: [PATCH 1/2] chore: update changelog and patches for v1.0.0 [skip ci]
++
++---
++ debian/changelog                   |   6 +
++ debian/patches/0001-Add-CI-1.patch | 445 +++++++++++++++++++++++++++++
++ 2 files changed, 451 insertions(+)
++ create mode 100644 debian/changelog
++ create mode 100644 debian/patches/0001-Add-CI-1.patch
++
++diff --git a/debian/changelog b/debian/changelog
++new file mode 100644
++index 0000000..0d3c38e
++--- /dev/null
+++++ b/debian/changelog
++@@ -0,0 +1,6 @@
+++dirview (1.0.0) stable; urgency=medium
+++
+++  * 
+++  * Automated release build. Commits: 55db782 Add CI (#1);
+++
+++ -- MAINTAINER <runner@runnervm5mmn9.51d2jnc52ifetbzxqd30u2lxzd.bx.internal.cloudapp.net>  Sun, 12 Jul 2026 09:56:27 +0000
++diff --git a/debian/patches/0001-Add-CI-1.patch b/debian/patches/0001-Add-CI-1.patch
++new file mode 100644
++index 0000000..add7b6a
++--- /dev/null
+++++ b/debian/patches/0001-Add-CI-1.patch
++@@ -0,0 +1,445 @@
+++From 55db7824a6146c71c430f3620036eb8ff88c28d0 Mon Sep 17 00:00:00 2001
+++From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
+++Date: Sun, 12 Jul 2026 13:54:26 +0400
+++Subject: [PATCH] Add CI (#1)
+++
+++* feat: add packaging metadata
+++
+++* feat: add CI, update README.md; add lints, sanitizer and formatting in CMakeLists.txt
+++---
+++ .clang-format            |   4 +
+++ .github/workflows/ci.yml | 201 +++++++++++++++++++++++++++++++++++++++
+++ .gitignore               |   9 +-
+++ ASTRA.md                 |   1 +
+++ CMakeLists.txt           |  31 +++++-
+++ README.md                |  43 ++++++++-
+++ debian/compat            |   1 +
+++ debian/control           |  10 ++
+++ debian/rules             |   3 +
+++ main.cpp => src/main.cpp |  12 +--
+++ 10 files changed, 305 insertions(+), 10 deletions(-)
+++ create mode 100644 .clang-format
+++ create mode 100644 .github/workflows/ci.yml
+++ create mode 100644 ASTRA.md
+++ create mode 100644 debian/compat
+++ create mode 100644 debian/control
+++ create mode 100755 debian/rules
+++ rename main.cpp => src/main.cpp (97%)
+++
+++diff --git a/.clang-format b/.clang-format
+++new file mode 100644
+++index 0000000..5e14121
+++--- /dev/null
++++++ b/.clang-format
+++@@ -0,0 +1,4 @@
++++BasedOnStyle: LLVM
++++IndentWidth: 4
++++ColumnLimit: 120
++++AllowShortFunctionsOnASingleLine: None
+++\ No newline at end of file
+++diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+++new file mode 100644
+++index 0000000..cf66533
+++--- /dev/null
++++++ b/.github/workflows/ci.yml
+++@@ -0,0 +1,201 @@
++++name: dirview CI/CD pipeline
++++
++++on:
++++  pull_request:
++++    branches: [ master ]
++++  push:
++++    branches: [ master ]
++++    tags:
++++      - 'v*.*.*-rc.*'
++++  workflow_dispatch:
++++
++++jobs:
++++  # --- СБОРКА И ЛИНТЕР (РАБОТАЕТ ВСЕГДА: И В PR, И ПРИ ТЕГАХ) ---
++++  build-and-lint:
++++    name: Build & Lint (Astra Linux Environment)
++++    runs-on: ubuntu-latest
++++    
++++    steps:
++++    - name: Checkout repository
++++      uses: actions/checkout@v4
++++
++++    - name: Install Astra Linux System Dependencies
++++      run: |
++++        sudo apt update
++++        sudo apt install -y --no-install-recommends \
++++          build-essential \
++++          cmake \
++++          clang-tidy \
++++          clazy \
++++          qtbase5-dev \
++++          qtchooser \
++++          qt5-qmake \
++++          qtbase5-dev-tools \
++++          git
++++
++++    - name: Configure CMake with Linters
++++      run: |
++++        cmake -S . -B build \
++++          -DCMAKE_BUILD_TYPE=Release \
++++          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
++++
++++    - name: Run Linters & Build Project
++++      run: cmake --build build --config Release
++++
++++  # --- РЕЛИЗ, ПАТЧИ, CHANGELOG, DEB-ПАКЕТ (ТОЛЬКО ПРИ МЕРДЖЕ / ТЕГЕ RC) ---
++++  release-and-package:
++++    name: Generate Package & Release
++++    needs: build-and-lint
++++    # Запускаем только если это мердж в master (push в master) ИЛИ релиз-тег
++++    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
++++    runs-on: ubuntu-latest
++++    permissions:
++++      contents: write
++++    
++++    steps:
++++    - name: Checkout repository
++++      uses: actions/checkout@v4
++++      with:
++++        fetch-depth: 0 # Важно для генерации changelog и патчей (нужна вся история)
++++
++++    - name: Install Debian Packaging Tools
++++      run: |
++++        sudo apt update
++++        sudo apt install -y --no-install-recommends \
++++          build-essential cmake qtbase5-dev qtbase5-dev-tools git \
++++          dpkg-dev debhelper devscripts fakeroot equivs
++++        sudo mk-build-deps -ri || true
++++
++++    # --- АВТО-ТЕГ И ОПРЕДЕЛЕНИЕ ВЕРСИИ ---
++++    # Если это мердж в master без тега, вычисляем версию и ставим чистый тег без -rc
++++    - name: Determine Version and Create Release Tag
++++      id: versioning
++++      shell: bash
++++      run: |
++++        git config --global safe.directory "$GITHUB_WORKSPACE"
++++
++++        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
++++          # Если запуск по тегу rc, берем его как есть
++++          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
++++          echo "VERSION=$VERSION" >> $GITHUB_ENV
++++          echo "tag_created=false" >> $GITHUB_OUTPUT
++++          echo "is_prerelease=true" >> $GITHUB_OUTPUT
++++        else
++++          # Если это мердж в master, ищем последний rc-тег, убираем из него "-rc.*"
++++          LAST_RC_TAG=$(git describe --tags --abbrev=0 --match "v*.*.*-rc.*" 2>/dev/null || echo "v1.0.0-rc.1")
++++          CLEAN_VERSION=$(echo "$LAST_RC_TAG" | sed -E 's/-rc\.[0-9]+//')
++++          
++++          echo "VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
++++          echo "is_prerelease=false" >> $GITHUB_OUTPUT
++++        fi
++++
++++    # --- ЗАПОЛНЕНИЕ DEBIAN/CHANGELOG ---
++++    - name: Update Debian Changelog
++++      shell: bash
++++      run: |
++++        git config --global safe.directory "$GITHUB_WORKSPACE"
++++
++++        DEB_VERSION=$(echo "${{ env.VERSION }}" | sed 's/^v//')
++++        echo "Valid Debian version to use: $DEB_VERSION"
++++
++++        # Берем последний тег
++++        LAST_TAG=$(git tag --sort=-version:refname | head -n1 || echo "")
++++
++++        # Собираем логи коммитов
++++        if [ -n "$LAST_TAG" ]; then
++++          COMMIT_LOGS=$(git log ${LAST_TAG}..HEAD --oneline | tr '\n' '; ')
++++        else
++++          COMMIT_LOGS=$(git log --oneline | tr '\n' '; ')
++++        fi
++++
++++        mkdir -p debian
++++        if [ ! -f debian/changelog ]; then
++++          dch --create --package "dirview" -v "$DEB_VERSION" ""
++++        else
++++          dch -v "$DEB_VERSION" "" -b
++++        fi
++++
++++        if [[ "${{ github.ref }}" == refs/heads/master ]]; then
++++          # Если релиз - помечаем stable
++++          dch -D "stable" "Automated release build. Commits: ${COMMIT_LOGS}"
++++        else 
++++          dch -D "unstable" "Automated pre-release build. Commits: ${COMMIT_LOGS}"
++++        fi
++++
++++        cat debian/changelog
++++
++++    # --- ГЕНЕРАЦИЯ .PATCH ФАЙЛОВ ---
++++    - name: Generate Patch Files
++++      shell: bash
++++      run: |
++++        git config --global safe.directory "$GITHUB_WORKSPACE"
++++
++++        # Очищаем старые патчи перед генерацией новых
++++        rm -rf patches/
++++        mkdir -p patches/
++++        
++++        # Берем последний тег
++++        LAST_TAG=$(git tag --sort=-version:refname | head -n1 || echo "")
++++
++++        if [ -n "$LAST_TAG" ]; then
++++          git format-patch ${LAST_TAG}..HEAD -o debian/patches/
++++        else
++++          git format-patch -1 -o debian/patches/
++++        fi
++++        
++++        # Также делаем архив для прикрепления к релизу GitHub
++++        tar -czf patches.tar.gz debian/patches/
++++
++++    # --- КОММИТ И ПУШ CHANGELOG И ПАТЧЕЙ В РЕПОЗИТОРИЙ ПОСЛЕ МЕРДЖА ---
++++    - name: Commit and Push Changelog & Patches to Master
++++      if: github.ref == 'refs/heads/master'
++++      shell: bash
++++      run: |
++++        git config --global safe.directory "$GITHUB_WORKSPACE"
++++        
++++        git config --global user.name 'github-actions[bot]'
++++        git config --global user.email 'github-actions[bot]@github.com'
++++        
++++        # Индексируем изменения
++++        git add debian/changelog debian/patches/
++++        
++++        # Проверяем, есть ли что коммитить (чтобы избежать ошибок, если файлы не изменились)
++++        if ! git diff-index --quiet HEAD; then
++++          git commit -m "chore: update changelog and patches for ${{ env.VERSION }} [skip ci]"
++++          git push origin master
++++
++++          # Проверяем, существует ли уже такой тег в репозитории
++++          if ! git rev-parse "${{ env.VERSION }}" >/dev/null 2>&1; then
++++            git tag "${{ env.VERSION }}"
++++            git push origin tag "${{ env.VERSION }}"
++++            echo "tag_created=true" >> $GITHUB_OUTPUT
++++          else
++++            echo "Tag ${{ env.VERSION }} already exists."
++++            echo "tag_created=false" >> $GITHUB_OUTPUT
++++          fi
++++        else
++++          echo "No changes in changelog or patches to commit."
++++        fi
++++
++++    # --- СБОРКА .DEB ПАКЕТА ---
++++    - name: Build Debian Package
++++      shell: bash
++++      run: |
++++        debuild -us -uc -b -j$(nproc)
++++        mv ../*.deb .
++++
++++    # --- СОЗДАНИЕ GitHub RELEASE И ЗАГРУЗКА АРТЕФАКТОВ ---
++++    - name: Create GitHub Release
++++      uses: softprops/action-gh-release@v2
++++      with:
++++        tag_name: ${{ env.VERSION }}
++++        name: Release ${{ env.VERSION }}
++++        body: |
++++          Automated Release.
++++          The debian package and patch archive are attached.
++++          See CHANGELOG.md for details.
++++        draft: false
++++        prerelease: ${{ steps.versioning.outputs.is_prerelease == 'true' }}
++++        files: |
++++          *.deb
++++          patches.tar.gz
+++\ No newline at end of file
+++diff --git a/.gitignore b/.gitignore
+++index d97d3a3..16e8225 100644
+++--- a/.gitignore
++++++ b/.gitignore
+++@@ -68,4 +68,11 @@ vcpkg_installed/
+++ Testing/
+++ .cache/
+++ 
+++-dirview_autogen
+++\ No newline at end of file
++++# trash after build .deb
++++dirview_autogen
++++obj-x86_64-linux-gnu
++++debian/debhelper-build-stamp
++++debian/dirview.substvars
++++debian/files
++++debian/.debhelper/
++++debian/dirview/
+++diff --git a/ASTRA.md b/ASTRA.md
+++new file mode 100644
+++index 0000000..373a9eb
+++--- /dev/null
++++++ b/ASTRA.md
+++@@ -0,0 +1 @@
++++# TO DO
+++\ No newline at end of file
+++diff --git a/CMakeLists.txt b/CMakeLists.txt
+++index 293b432..c3793e8 100644
+++--- a/CMakeLists.txt
++++++ b/CMakeLists.txt
+++@@ -15,9 +15,31 @@ find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+++ 
+++ # 3. Define source files
+++ set(PROJECT_SOURCES
+++-    main.cpp
++++    src/main.cpp
+++ )
+++ 
++++# 3.1 Formatting
++++find_program(CLANG_FORMAT_EXE clang-format)
++++if(CLANG_FORMAT_EXE)
++++    add_custom_target(format
++++        COMMAND ${CLANG_FORMAT_EXE} -i -style=file ${ALL_CXX_FILES}
++++        COMMENT "Formatting code with clang-format..."
++++    )
++++endif()
++++
++++# 3.2 Tidy
++++set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # Требуется для работы линтеров
++++
++++find_program(CLANG_TIDY_EXE clang-tidy)
++++if(CLANG_TIDY_EXE)
++++    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-checks=-*,bugprone-*,modernize-*,performance-*,readability-*")
++++endif()
++++
++++find_program(CLAZY_EXE clazy)
++++if(CLAZY_EXE)
++++    set(CMAKE_CXX_COMPILER_LAUNCHER clazy)
++++endif()
++++
+++ # 4. Create the executable binary
+++ add_executable(dirview ${PROJECT_SOURCES})
+++ 
+++@@ -27,3 +49,10 @@ target_link_libraries(dirview PRIVATE
+++     Qt5::Gui
+++     Qt5::Widgets
+++ )
++++
++++include(GNUInstallDirs)
++++
++++install(TARGETS dirview
++++    BUNDLE DESTINATION .
++++    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++++)
+++diff --git a/README.md b/README.md
+++index c653d86..2167367 100644
+++--- a/README.md
++++++ b/README.md
+++@@ -1 +1,42 @@
+++-# dirview
+++\ No newline at end of file
++++# DirView
++++
++++[![MIT License](https://img.shields.io/github/license/N3WC0DER/dirview)](LICENSE)
++++[![Latest Release](https://img.shields.io/github/v/release/N3WC0DER/dirview)](https://github.com/N3WC0DER/dirview/releases)
++++[![Build Status](https://img.shields.io/github/actions/workflow/status/N3WC0DER/dirview/ci.yml)](https://github.com)
++++[![Issues Open](https://img.shields.io/github/issues/N3WC0DER/dirview)](https://github.com/N3WC0DER/dirview/issues)
++++![Stars](https://img.shields.io/github/stars/N3WC0DER/dirview)
++++
++++DirView — это легковесная графическая утилита для Linux, предназначенная для быстрого и удобного отображения структуры директорий в виде дерева с возможностью фильтрации.
++++
++++[**FOR ASTRA**](ASTRA.md)
++++
++++## Особенности
++++
++++* Быстрый рендеринг: Высокая скорость работы даже на больших структурах данных.
++++* Гибкая фильтрация: Исключение файлов и папок по маске или регулярным выражениям..
++++
++++## Требования
++++Для сборки и запуска утилиты вам понадобятся:
++++
++++* GCC или Clang с поддержкой стандарта C++17
++++* CMake 3.15+ (при наличии)
++++* Qt 5.15+
++++
++++## Установка
++++.deb пакеты доступны в разделе Releases.
++++
++++### Сборка из исходников
++++
++++```bash
++++git clone https://github.com/N3WC0DER/dirview.git
++++cd dirview
++++cmake --build build --config Release
++++sudo cmake --install build --config Release
++++```
++++
++++## Лицензия
++++
++++Этот проект распространяется под лицензией MIT. Подробности можно найти в файле LICENSE.
++++
++++Если вы хотите развить проект, пожалуйста, напишите мне в Issues или создайте Pull Request. Буду рад любой помощи в улучшении функционала!
++++
+++diff --git a/debian/compat b/debian/compat
+++new file mode 100644
+++index 0000000..3cacc0b
+++--- /dev/null
++++++ b/debian/compat
+++@@ -0,0 +1 @@
++++12
+++\ No newline at end of file
+++diff --git a/debian/control b/debian/control
+++new file mode 100644
+++index 0000000..2f1c185
+++--- /dev/null
++++++ b/debian/control
+++@@ -0,0 +1,10 @@
++++Source: dirview
++++Section: utils
++++Priority: optional
++++Maintainer: Savkin Nikita <sawkin.nik@gmail.com>
++++Build-Depends: debhelper (>= 12), cmake, qtbase5-dev
++++
++++Package: dirview
++++Architecture: any
++++Depends: libqt5widgets5, libqt5core5a, libqt5gui5
++++Description: Просмотр дерева каталогов с домашней директории
+++\ No newline at end of file
+++diff --git a/debian/rules b/debian/rules
+++new file mode 100755
+++index 0000000..d9fbf74
+++--- /dev/null
++++++ b/debian/rules
+++@@ -0,0 +1,3 @@
++++#!/usr/bin/make -f
++++%:
++++	dh $@ --buildsystem=cmake
+++diff --git a/main.cpp b/src/main.cpp
+++similarity index 97%
+++rename from main.cpp
+++rename to src/main.cpp
+++index 20e5d45..ecf9ba9 100644
+++--- a/main.cpp
++++++ b/src/main.cpp
+++@@ -49,16 +49,15 @@
+++ ****************************************************************************/
+++ 
+++ #include <QApplication>
+++-#include <QFileSystemModel>
++++#include <QCommandLineOption>
++++#include <QCommandLineParser>
+++ #include <QFileIconProvider>
++++#include <QFileSystemModel>
+++ #include <QScreen>
+++ #include <QScroller>
+++ #include <QTreeView>
+++-#include <QCommandLineParser>
+++-#include <QCommandLineOption>
+++ 
+++-int main(int argc, char *argv[])
+++-{
++++int main(int argc, char *argv[]) {
+++     QApplication app(argc, argv);
+++ 
+++     QCoreApplication::setApplicationVersion(QT_VERSION_STR);
+++@@ -72,8 +71,7 @@ int main(int argc, char *argv[])
+++     parser.addOption(dontWatchOption);
+++     parser.addPositionalArgument("directory", "The directory to start in.");
+++     parser.process(app);
+++-    const QString rootPath = parser.positionalArguments().isEmpty()
+++-        ? QString() : parser.positionalArguments().first();
++++    const QString rootPath = parser.positionalArguments().isEmpty() ? QString() : parser.positionalArguments().first();
+++ 
+++     QFileSystemModel model;
+++     model.setRootPath("");
+++-- 
+++2.54.0
+++
++-- 
++2.54.0
++
+diff --git a/debian/patches/0002-Refactor-code-2.patch b/debian/patches/0002-Refactor-code-2.patch
+new file mode 100644
+index 0000000..9a31a19
+--- /dev/null
++++ b/debian/patches/0002-Refactor-code-2.patch
+@@ -0,0 +1,183 @@
++From 43c187d7e5c164d1eab09d57dcf8324b5db0047b Mon Sep 17 00:00:00 2001
++From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
++Date: Sun, 12 Jul 2026 15:33:39 +0400
++Subject: [PATCH 2/2] Refactor code (#2)
++
++---
++ CMakeLists.txt                   |  3 +++
++ src/main.cpp                     | 45 +++++++++-----------------------
++ src/ui/DirectoryViewerWidget.cpp | 32 +++++++++++++++++++++++
++ src/ui/DirectoryViewerWidget.h   | 24 +++++++++++++++++
++ src/utils/Options.h              |  6 +++++
++ 5 files changed, 77 insertions(+), 33 deletions(-)
++ create mode 100644 src/ui/DirectoryViewerWidget.cpp
++ create mode 100644 src/ui/DirectoryViewerWidget.h
++ create mode 100644 src/utils/Options.h
++
++diff --git a/CMakeLists.txt b/CMakeLists.txt
++index c3793e8..ab75ff0 100644
++--- a/CMakeLists.txt
+++++ b/CMakeLists.txt
++@@ -16,6 +16,9 @@ find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
++ # 3. Define source files
++ set(PROJECT_SOURCES
++     src/main.cpp
+++    src/ui/DirectoryViewerWidget.cpp
+++    src/ui/DirectoryViewerWidget.h
+++    src/utils/Options.h
++ )
++ 
++ # 3.1 Formatting
++diff --git a/src/main.cpp b/src/main.cpp
++index ecf9ba9..5baaa17 100644
++--- a/src/main.cpp
+++++ b/src/main.cpp
++@@ -56,50 +56,29 @@
++ #include <QScreen>
++ #include <QScroller>
++ #include <QTreeView>
+++#include "utils/Options.h"
+++#include "ui/DirectoryViewerWidget.h"
++ 
++-int main(int argc, char *argv[]) {
+++auto main(int argc, char *argv[]) -> int {
++     QApplication app(argc, argv);
++ 
+++    // Command line options
++     QCoreApplication::setApplicationVersion(QT_VERSION_STR);
++     QCommandLineParser parser;
++     parser.setApplicationDescription("Qt Dir View Example");
++     parser.addHelpOption();
++     parser.addVersionOption();
++-    QCommandLineOption dontUseCustomDirectoryIconsOption("c", "Set QFileSystemModel::DontUseCustomDirectoryIcons");
+++    QCommandLineOption dontUseCustomDirectoryIconsOption(Options::dontUseCustomDirectoryIcons,
+++        "Set QFileSystemModel::DontUseCustomDirectoryIcons");
++     parser.addOption(dontUseCustomDirectoryIconsOption);
++-    QCommandLineOption dontWatchOption("w", "Set QFileSystemModel::DontWatch");
+++    QCommandLineOption dontWatchOption(Options::dontWatch,
+++        "Set QFileSystemModel::DontWatch");
++     parser.addOption(dontWatchOption);
++-    parser.addPositionalArgument("directory", "The directory to start in.");
++     parser.process(app);
++-    const QString rootPath = parser.positionalArguments().isEmpty() ? QString() : parser.positionalArguments().first();
++ 
++-    QFileSystemModel model;
++-    model.setRootPath("");
++-    if (parser.isSet(dontUseCustomDirectoryIconsOption))
++-        model.setOption(QFileSystemModel::DontUseCustomDirectoryIcons);
++-    if (parser.isSet(dontWatchOption))
++-        model.setOption(QFileSystemModel::DontWatchForChanges);
++-    QTreeView tree;
++-    tree.setModel(&model);
++-    if (!rootPath.isEmpty()) {
++-        const QModelIndex rootIndex = model.index(QDir::cleanPath(rootPath));
++-        if (rootIndex.isValid())
++-            tree.setRootIndex(rootIndex);
++-    }
+++    // Main window
+++    DirectoryViewerWidget dirview(parser);
+++    dirview.show();
++ 
++-    // Demonstrating look and feel features
++-    tree.setAnimated(false);
++-    tree.setIndentation(20);
++-    tree.setSortingEnabled(true);
++-    const QSize availableSize = tree.screen()->availableGeometry().size();
++-    tree.resize(availableSize / 2);
++-    tree.setColumnWidth(0, tree.width() / 3);
++-
++-    // Make it flickable on touchscreens
++-    QScroller::grabGesture(&tree, QScroller::TouchGesture);
++-
++-    tree.setWindowTitle(QObject::tr("Dir View"));
++-    tree.show();
++-
++-    return app.exec();
+++    return QApplication::exec();
++ }
++diff --git a/src/ui/DirectoryViewerWidget.cpp b/src/ui/DirectoryViewerWidget.cpp
++new file mode 100644
++index 0000000..95b06ae
++--- /dev/null
+++++ b/src/ui/DirectoryViewerWidget.cpp
++@@ -0,0 +1,32 @@
+++#include "DirectoryViewerWidget.h"
+++
+++DirectoryViewerWidget::DirectoryViewerWidget(const QCommandLineParser &parser, QWidget *parent)
+++    : QMainWindow(parent)
+++{
+++    model.setRootPath("");
+++    if (parser.isSet(Options::dontUseCustomDirectoryIcons))
+++        model.setOption(QFileSystemModel::DontUseCustomDirectoryIcons);
+++    if (parser.isSet(Options::dontWatch))
+++        model.setOption(QFileSystemModel::DontWatchForChanges);
+++    
+++    tree.setModel(&model);
+++
+++    // Demonstrating look and feel features
+++    tree.setAnimated(false);
+++    tree.setIndentation(20);
+++    tree.setSortingEnabled(true);
+++    tree.setColumnWidth(0, tree.width() / 3);
+++
+++    // Make it flickable on touchscreens
+++    QScroller::grabGesture(&tree, QScroller::TouchGesture);
+++
+++    auto *central = new QWidget(this);
+++    central->setObjectName("centralwidget");
+++
+++    auto *layout = new QVBoxLayout(central);
+++    layout->addWidget(&tree);
+++    layout->setStretchFactor(&tree, 1);
+++
+++    setCentralWidget(central);
+++    // QFileSystemModel::setNameFilters()
+++}
++\ No newline at end of file
++diff --git a/src/ui/DirectoryViewerWidget.h b/src/ui/DirectoryViewerWidget.h
++new file mode 100644
++index 0000000..822f90b
++--- /dev/null
+++++ b/src/ui/DirectoryViewerWidget.h
++@@ -0,0 +1,24 @@
+++#pragma once
+++
+++#include <QWidget>
+++#include <QtWidgets>
+++#include <QSizePolicy>
+++#include "../utils/Options.h"
+++
+++/**
+++ * @brief Main window
+++ * 
+++ */
+++class DirectoryViewerWidget : public QMainWindow
+++{
+++    Q_OBJECT
+++
+++public:
+++
+++    explicit DirectoryViewerWidget(const QCommandLineParser &parser, QWidget *parent = nullptr);
+++
+++private:
+++
+++    QFileSystemModel model;
+++    QTreeView tree;
+++};
++\ No newline at end of file
++diff --git a/src/utils/Options.h b/src/utils/Options.h
++new file mode 100644
++index 0000000..9f38cf4
++--- /dev/null
+++++ b/src/utils/Options.h
++@@ -0,0 +1,6 @@
+++#pragma once
+++
+++struct Options {
+++    inline static const char* dontWatch = "w";
+++    inline static const char* dontUseCustomDirectoryIcons = "c";
+++};
++\ No newline at end of file
++-- 
++2.54.0
++
+-- 
+2.54.0
+

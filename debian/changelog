@@ -1,3 +1,12 @@
+dirview (1.0.1) stable; urgency=medium
+
+  * Automated release build. Commits: 9b32521 Refactor (#3);a59d0e9
+    chore: update changelog and patches for v1.0.0 [skip ci];43c187d
+    Refactor code (#2);91bc486 chore: update changelog and patches for
+    v1.0.0 [skip ci];
+
+ -- MAINTAINER <runner@runnervm5mmn9.mhuo5aufw0zudj5rd413yb3ebd.dx.internal.cloudapp.net>  Sun, 12 Jul 2026 12:14:18 +0000
+
 dirview (1.0.0) stable; urgency=medium
 
   * Automated release build. Commits: 43c187d Refactor code (#2);91bc486

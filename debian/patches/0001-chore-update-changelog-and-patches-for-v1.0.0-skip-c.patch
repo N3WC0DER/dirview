@@ -1,7 +1,7 @@
 From 91bc486fe3e8f5d259b7221122413b1ca0d2e00f Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]" <github-actions[bot]@github.com>
 Date: Sun, 12 Jul 2026 09:56:28 +0000
-Subject: [PATCH 1/2] chore: update changelog and patches for v1.0.0 [skip ci]
+Subject: [PATCH 1/4] chore: update changelog and patches for v1.0.0 [skip ci]
 
 ---
  debian/changelog                   |   6 +
