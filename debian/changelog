@@ -1,5 +1,14 @@
 dirview (1.1.0) stable; urgency=medium
 
+  * Automated release build. Commits: ca7822a Merge branch 'master' of
+    https://github.com/N3WC0DER/dirview;4e070a8 chore: update changelog
+    and patches for v1.1.0 [skip ci];641d1ee feat: set home directory as
+    root; show hidden files and dirs; (#4);
+
+ -- MAINTAINER <runner@runnervm5mmn9.ym4jgw421ayufkt5pkdtwnlkcd.gx.internal.cloudapp.net>  Sun, 12 Jul 2026 12:55:36 +0000
+
+dirview (1.1.0) stable; urgency=medium
+
   * Automated release build. Commits: 641d1ee feat: set home directory
     as root; show hidden files and dirs; (#4);
 

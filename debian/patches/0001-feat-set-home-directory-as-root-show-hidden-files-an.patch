@@ -1,8 +1,8 @@
 From 641d1eeec97f220f1779d323668430effcccc1af Mon Sep 17 00:00:00 2001
 From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
 Date: Sun, 12 Jul 2026 16:46:25 +0400
-Subject: [PATCH] feat: set home directory as root; show hidden files and dirs;
- (#4)
+Subject: [PATCH 1/2] feat: set home directory as root; show hidden files and
+ dirs; (#4)
 
 ---
  src/ui/DirectoryViewerWidget.cpp | 15 +++++++++------
