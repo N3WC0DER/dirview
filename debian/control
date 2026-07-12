@@ -3,7 +3,6 @@ Section: utils
 Priority: optional
 Maintainer: Savkin Nikita <sawkin.nik@gmail.com>
 Build-Depends: debhelper (>= 12), cmake, qtbase5-dev
-Standards-Version: 1.0.0
 
 Package: dirview
 Architecture: any
