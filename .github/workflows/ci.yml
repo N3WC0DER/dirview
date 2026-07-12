@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [ master ]
   push:
+    branches: [ master ]
     tags:
       - 'v*.*.*-rc.*'
   workflow_dispatch:
@@ -145,7 +146,7 @@ jobs:
         # Также делаем архив для прикрепления к релизу GitHub
         tar -czf patches.tar.gz debian/patches/
 
-    # --- КОММИТ И ПУШ CHANGELOG И ПАТЧЕЙ В РЕПОЗИТОРИЙ ---
+    # --- КОММИТ И ПУШ CHANGELOG И ПАТЧЕЙ В РЕПОЗИТОРИЙ ПОСЛЕ МЕРДЖА ---
     - name: Commit and Push Changelog & Patches to Master
       if: github.ref == 'refs/heads/master'
       shell: bash
