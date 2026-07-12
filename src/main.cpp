@@ -56,50 +56,29 @@
 #include <QScreen>
 #include <QScroller>
 #include <QTreeView>
+#include "utils/Options.h"
+#include "ui/DirectoryViewerWidget.h"
 
-int main(int argc, char *argv[]) {
+auto main(int argc, char *argv[]) -> int {
     QApplication app(argc, argv);
 
+    // Command line options
     QCoreApplication::setApplicationVersion(QT_VERSION_STR);
     QCommandLineParser parser;
     parser.setApplicationDescription("Qt Dir View Example");
     parser.addHelpOption();
     parser.addVersionOption();
-    QCommandLineOption dontUseCustomDirectoryIconsOption("c", "Set QFileSystemModel::DontUseCustomDirectoryIcons");
+    QCommandLineOption dontUseCustomDirectoryIconsOption(Options::dontUseCustomDirectoryIcons,
+        "Set QFileSystemModel::DontUseCustomDirectoryIcons");
     parser.addOption(dontUseCustomDirectoryIconsOption);
-    QCommandLineOption dontWatchOption("w", "Set QFileSystemModel::DontWatch");
+    QCommandLineOption dontWatchOption(Options::dontWatch,
+        "Set QFileSystemModel::DontWatch");
     parser.addOption(dontWatchOption);
-    parser.addPositionalArgument("directory", "The directory to start in.");
     parser.process(app);
-    const QString rootPath = parser.positionalArguments().isEmpty() ? QString() : parser.positionalArguments().first();
 
-    QFileSystemModel model;
-    model.setRootPath("");
-    if (parser.isSet(dontUseCustomDirectoryIconsOption))
-        model.setOption(QFileSystemModel::DontUseCustomDirectoryIcons);
-    if (parser.isSet(dontWatchOption))
-        model.setOption(QFileSystemModel::DontWatchForChanges);
-    QTreeView tree;
-    tree.setModel(&model);
-    if (!rootPath.isEmpty()) {
-        const QModelIndex rootIndex = model.index(QDir::cleanPath(rootPath));
-        if (rootIndex.isValid())
-            tree.setRootIndex(rootIndex);
-    }
+    // Main window
+    DirectoryViewerWidget dirview(parser);
+    dirview.show();
 
-    // Demonstrating look and feel features
-    tree.setAnimated(false);
-    tree.setIndentation(20);
-    tree.setSortingEnabled(true);
-    const QSize availableSize = tree.screen()->availableGeometry().size();
-    tree.resize(availableSize / 2);
-    tree.setColumnWidth(0, tree.width() / 3);
-
-    // Make it flickable on touchscreens
-    QScroller::grabGesture(&tree, QScroller::TouchGesture);
-
-    tree.setWindowTitle(QObject::tr("Dir View"));
-    tree.show();
-
-    return app.exec();
+    return QApplication::exec();
 }
