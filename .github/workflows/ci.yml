@@ -131,8 +131,8 @@ jobs:
         git config --global safe.directory "$GITHUB_WORKSPACE"
 
         # Очищаем старые патчи перед генерацией новых
-        rm -rf patches/
-        mkdir -p patches/
+        rm -rf debian/patches/
+        mkdir -p debian/patches/
         
         # Берем последний тег
         LAST_TAG=$(git tag --sort=-version:refname | head -n1 || echo "")
