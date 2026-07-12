@@ -6,6 +6,7 @@ on:
   push:
     tags:
       - 'v*.*.*-rc.*'
+  workflow_dispatch:
 
 jobs:
   # --- СБОРКА И ЛИНТЕР (РАБОТАЕТ ВСЕГДА: И В PR, И ПРИ ТЕГАХ) ---
@@ -19,8 +20,8 @@ jobs:
 
     - name: Install Astra Linux System Dependencies
       run: |
-        apt-get update
-        apt-get install -y --no-install-recommends \
+        sudo apt update
+        sudo apt install -y --no-install-recommends \
           build-essential \
           cmake \
           clang-tidy \
@@ -58,8 +59,8 @@ jobs:
 
     - name: Install Debian Packaging Tools
       run: |
-        apt-get update
-        apt-get install -y --no-install-recommends \
+        sudo apt update
+        sudo apt install -y --no-install-recommends \
           build-essential cmake qtbase5-dev qtbase5-dev-tools git \
           dpkg-dev debhelper devscripts fakeroot
 
@@ -90,7 +91,6 @@ jobs:
     - name: Update Debian Changelog
       shell: bash
       run: |
-        cd "$GITHUB_WORKSPACE"
         git config --global safe.directory "$GITHUB_WORKSPACE"
 
         DEB_VERSION=$(echo "${{ env.VERSION }}" | sed 's/^v//')
@@ -126,7 +126,6 @@ jobs:
     - name: Generate Patch Files
       shell: bash
       run: |
-        cd "$GITHUB_WORKSPACE"
         git config --global safe.directory "$GITHUB_WORKSPACE"
 
         # Очищаем старые патчи перед генерацией новых
@@ -150,7 +149,6 @@ jobs:
       if: github.ref == 'refs/heads/master'
       shell: bash
       run: |
-        cd "$GITHUB_WORKSPACE"
         git config --global safe.directory "$GITHUB_WORKSPACE"
         
         git config --global user.name 'github-actions[bot]'
@@ -181,7 +179,6 @@ jobs:
     - name: Build Debian Package
       shell: bash
       run: |
-        cd "$GITHUB_WORKSPACE"
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
         cmake --build build
         DESTDIR=$(pwd)/debian/dirview cmake --install build
