@@ -16,6 +16,9 @@ find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 # 3. Define source files
 set(PROJECT_SOURCES
     src/main.cpp
+    src/ui/DirectoryViewerWidget.cpp
+    src/ui/DirectoryViewerWidget.h
+    src/utils/Options.h
 )
 
 # 3.1 Formatting
