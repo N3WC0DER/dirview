@@ -73,11 +73,8 @@ jobs:
       id: versioning
       shell: bash
       run: |
-        git config --global --add safe.directory /__w/*
-        
-        git config --global user.name 'github-actions[bot]'
-        git config --global user.email 'github-actions[bot]@github.com'
-        
+        git config --global safe.directory "$GITHUB_WORKSPACE"
+
         if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
           # Если запуск по тегу rc, берем его как есть
           VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
@@ -97,8 +94,8 @@ jobs:
     - name: Update Debian Changelog
       shell: bash
       run: |
-        git config --global --add safe.directory /__w/*
-        
+        git config --global safe.directory "$GITHUB_WORKSPACE"
+
         DEB_VERSION=$(echo "${{ env.VERSION }}" | sed 's/^v//')
         echo "Valid Debian version to use: $DEB_VERSION"
 
@@ -132,7 +129,8 @@ jobs:
     - name: Generate Patch Files
       shell: bash
       run: |
-        git config --global --add safe.directory /__w/*     
+        git config --global safe.directory "$GITHUB_WORKSPACE"
+
         # Очищаем старые патчи перед генерацией новых
         rm -rf patches/
         mkdir -p patches/
@@ -154,7 +152,7 @@ jobs:
       if: github.ref == 'refs/heads/master'
       shell: bash
       run: |
-        git config --global --add safe.directory /__w/*
+        git config --global safe.directory "$GITHUB_WORKSPACE"
         
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@github.com'
