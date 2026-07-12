@@ -3,22 +3,26 @@
 DirectoryViewerWidget::DirectoryViewerWidget(const QCommandLineParser &parser, QWidget *parent)
     : QMainWindow(parent)
 {
-    model.setRootPath("");
+    model.setRootPath("/");
     if (parser.isSet(Options::dontUseCustomDirectoryIcons))
         model.setOption(QFileSystemModel::DontUseCustomDirectoryIcons);
     if (parser.isSet(Options::dontWatch))
         model.setOption(QFileSystemModel::DontWatchForChanges);
     
+    model.setFilter(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllDirs);
+    
     tree.setModel(&model);
 
-    // Demonstrating look and feel features
     tree.setAnimated(false);
-    tree.setIndentation(20);
+    int identation = 20;
+    tree.setIndentation(identation);
     tree.setSortingEnabled(true);
     tree.setColumnWidth(0, tree.width() / 3);
 
-    // Make it flickable on touchscreens
-    QScroller::grabGesture(&tree, QScroller::TouchGesture);
+    // Home directory
+    const QModelIndex rootIndex = model.index(QDir::cleanPath(QDir::homePath()));
+    if (rootIndex.isValid())
+        tree.setRootIndex(rootIndex);
 
     auto *central = new QWidget(this);
     central->setObjectName("centralwidget");
@@ -28,5 +32,4 @@ DirectoryViewerWidget::DirectoryViewerWidget(const QCommandLineParser &parser, Q
     layout->setStretchFactor(&tree, 1);
 
     setCentralWidget(central);
-    // QFileSystemModel::setNameFilters()
 }
