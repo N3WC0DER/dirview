@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QSizePolicy>
 #include "../utils/Options.h"
+#include "../utils/FilterProxyModel.hpp"
 
 /**
  * @brief Main window
@@ -19,6 +20,14 @@ public:
 
 private:
 
-    QFileSystemModel model;
-    QTreeView tree;
+    QLineEdit *filter;
+
+    inline static const QSize BASE_SIZE = QSize(1000, 600);
+
+    /** Задержка ввода для оптимизации */
+    inline static const int filterDelay = 200;
+    QTimer *filterDelayTimer;
+
+    /** Корневая директория */
+    inline static const QString homePath = QDir::homePath();
 };

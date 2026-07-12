@@ -19,6 +19,7 @@ set(PROJECT_SOURCES
     src/ui/DirectoryViewerWidget.cpp
     src/ui/DirectoryViewerWidget.h
     src/utils/Options.h
+    src/utils/FilterProxyModel.hpp
 )
 
 # 3.1 Formatting
