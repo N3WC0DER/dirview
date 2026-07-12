@@ -1,3 +1,10 @@
+dirview (1.1.0) stable; urgency=medium
+
+  * Automated release build. Commits: 641d1ee feat: set home directory
+    as root; show hidden files and dirs; (#4);
+
+ -- MAINTAINER <runner@runnervm5mmn9.410ucsvj4nduxih5olc0iqwbqd.ex.internal.cloudapp.net>  Sun, 12 Jul 2026 12:48:57 +0000
+
 dirview (1.0.1) stable; urgency=medium
 
   * Automated release build. Commits: 9b32521 Refactor (#3);a59d0e9

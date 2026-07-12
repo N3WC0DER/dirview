@@ -1,0 +1,56 @@
+From 641d1eeec97f220f1779d323668430effcccc1af Mon Sep 17 00:00:00 2001
+From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
+Date: Sun, 12 Jul 2026 16:46:25 +0400
+Subject: [PATCH] feat: set home directory as root; show hidden files and dirs;
+ (#4)
+
+---
+ src/ui/DirectoryViewerWidget.cpp | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/src/ui/DirectoryViewerWidget.cpp b/src/ui/DirectoryViewerWidget.cpp
+index 95b06ae..4d8c2f8 100644
+--- a/src/ui/DirectoryViewerWidget.cpp
++++ b/src/ui/DirectoryViewerWidget.cpp
+@@ -3,22 +3,26 @@
+ DirectoryViewerWidget::DirectoryViewerWidget(const QCommandLineParser &parser, QWidget *parent)
+     : QMainWindow(parent)
+ {
+-    model.setRootPath("");
++    model.setRootPath("/");
+     if (parser.isSet(Options::dontUseCustomDirectoryIcons))
+         model.setOption(QFileSystemModel::DontUseCustomDirectoryIcons);
+     if (parser.isSet(Options::dontWatch))
+         model.setOption(QFileSystemModel::DontWatchForChanges);
+     
++    model.setFilter(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllDirs);
++    
+     tree.setModel(&model);
+ 
+-    // Demonstrating look and feel features
+     tree.setAnimated(false);
+-    tree.setIndentation(20);
++    int identation = 20;
++    tree.setIndentation(identation);
+     tree.setSortingEnabled(true);
+     tree.setColumnWidth(0, tree.width() / 3);
+ 
+-    // Make it flickable on touchscreens
+-    QScroller::grabGesture(&tree, QScroller::TouchGesture);
++    // Home directory
++    const QModelIndex rootIndex = model.index(QDir::cleanPath(QDir::homePath()));
++    if (rootIndex.isValid())
++        tree.setRootIndex(rootIndex);
+ 
+     auto *central = new QWidget(this);
+     central->setObjectName("centralwidget");
+@@ -28,5 +32,4 @@ DirectoryViewerWidget::DirectoryViewerWidget(const QCommandLineParser &parser, Q
+     layout->setStretchFactor(&tree, 1);
+ 
+     setCentralWidget(central);
+-    // QFileSystemModel::setNameFilters()
+ }
+\ No newline at end of file
+-- 
+2.54.0
+
