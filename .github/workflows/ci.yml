@@ -191,8 +191,9 @@ jobs:
         tag_name: ${{ env.VERSION }}
         name: Release ${{ env.VERSION }}
         body: |
-          Automated Release for Astra Linux.
+          Automated Release.
           The debian package and patch archive are attached.
+          See CHANGELOG.md for details.
         draft: false
         prerelease: ${{ steps.versioning.outputs.is_prerelease == 'true' }}
         files: |
