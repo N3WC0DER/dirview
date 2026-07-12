@@ -56,7 +56,7 @@
 #include <QScreen>
 #include <QScroller>
 #include <QTreeView>
-#include "utils/Options.h"
+#include "utils/Options.hpp"
 #include "ui/DirectoryViewerWidget.h"
 
 auto main(int argc, char *argv[]) -> int {
@@ -64,20 +64,10 @@ auto main(int argc, char *argv[]) -> int {
 
     // Command line options
     QCoreApplication::setApplicationVersion(QT_VERSION_STR);
-    QCommandLineParser parser;
-    parser.setApplicationDescription("Qt Dir View Example");
-    parser.addHelpOption();
-    parser.addVersionOption();
-    QCommandLineOption dontUseCustomDirectoryIconsOption(Options::dontUseCustomDirectoryIcons,
-        "Set QFileSystemModel::DontUseCustomDirectoryIcons");
-    parser.addOption(dontUseCustomDirectoryIconsOption);
-    QCommandLineOption dontWatchOption(Options::dontWatch,
-        "Set QFileSystemModel::DontWatch");
-    parser.addOption(dontWatchOption);
-    parser.process(app);
+    std::unique_ptr<QCommandLineParser> parser = initParser(app);
 
     // Main window
-    DirectoryViewerWidget dirview(parser);
+    DirectoryViewerWidget dirview(parseOptions(parser.get()));
     dirview.show();
 
     return QApplication::exec();

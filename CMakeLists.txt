@@ -3,8 +3,8 @@ project(dirview LANGUAGES CXX)
 
 # 1. Enable automatic compilation of Meta-Objects, UI files, and Resources
 set(CMAKE_AUTOMOC ON)   # Handles Q_OBJECT macros
-set(CMAKE_AUTOUIC ON)   # Processes .ui files
-set(CMAKE_AUTORCC ON)   # Processes .qrc files
+set(CMAKE_AUTOUIC OFF)   # Processes .ui files
+set(CMAKE_AUTORCC OFF)   # Processes .qrc files
 set(CMAKE_INCLUDE_CURRENT_DIR ON) # Ensures MOC files are discoverable
 
 set(CMAKE_CXX_STANDARD 17)
@@ -18,8 +18,13 @@ set(PROJECT_SOURCES
     src/main.cpp
     src/ui/DirectoryViewerWidget.cpp
     src/ui/DirectoryViewerWidget.h
-    src/utils/Options.h
-    src/utils/FilterProxyModel.hpp
+    src/fs/FilterProxyModel.h
+    src/fs/FilterProxyModel.cpp
+    src/fs/ModelFactory.h
+    src/fs/ModelFactory.cpp
+    src/fs/FilterController.h
+    src/fs/FilterController.cpp
+    src/utils/Options.hpp
 )
 
 # 3.1 Formatting
