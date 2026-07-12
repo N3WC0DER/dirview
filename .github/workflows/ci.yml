@@ -1,0 +1,201 @@
+name: dirview CI/CD pipeline
+
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+    tags:
+      - 'v*.*.*-rc.*'
+  workflow_dispatch:
+
+jobs:
+  # --- СБОРКА И ЛИНТЕР (РАБОТАЕТ ВСЕГДА: И В PR, И ПРИ ТЕГАХ) ---
+  build-and-lint:
+    name: Build & Lint (Astra Linux Environment)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Astra Linux System Dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y --no-install-recommends \
+          build-essential \
+          cmake \
+          clang-tidy \
+          clazy \
+          qtbase5-dev \
+          qtchooser \
+          qt5-qmake \
+          qtbase5-dev-tools \
+          git
+
+    - name: Configure CMake with Linters
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    - name: Run Linters & Build Project
+      run: cmake --build build --config Release
+
+  # --- РЕЛИЗ, ПАТЧИ, CHANGELOG, DEB-ПАКЕТ (ТОЛЬКО ПРИ МЕРДЖЕ / ТЕГЕ RC) ---
+  release-and-package:
+    name: Generate Package & Release
+    needs: build-and-lint
+    # Запускаем только если это мердж в master (push в master) ИЛИ релиз-тег
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Важно для генерации changelog и патчей (нужна вся история)
+
+    - name: Install Debian Packaging Tools
+      run: |
+        sudo apt update
+        sudo apt install -y --no-install-recommends \
+          build-essential cmake qtbase5-dev qtbase5-dev-tools git \
+          dpkg-dev debhelper devscripts fakeroot equivs
+        sudo mk-build-deps -ri || true
+
+    # --- АВТО-ТЕГ И ОПРЕДЕЛЕНИЕ ВЕРСИИ ---
+    # Если это мердж в master без тега, вычисляем версию и ставим чистый тег без -rc
+    - name: Determine Version and Create Release Tag
+      id: versioning
+      shell: bash
+      run: |
+        git config --global safe.directory "$GITHUB_WORKSPACE"
+
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # Если запуск по тегу rc, берем его как есть
+          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "tag_created=false" >> $GITHUB_OUTPUT
+          echo "is_prerelease=true" >> $GITHUB_OUTPUT
+        else
+          # Если это мердж в master, ищем последний rc-тег, убираем из него "-rc.*"
+          LAST_RC_TAG=$(git describe --tags --abbrev=0 --match "v*.*.*-rc.*" 2>/dev/null || echo "v1.0.0-rc.1")
+          CLEAN_VERSION=$(echo "$LAST_RC_TAG" | sed -E 's/-rc\.[0-9]+//')
+          
+          echo "VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+          echo "is_prerelease=false" >> $GITHUB_OUTPUT
+        fi
+
+    # --- ЗАПОЛНЕНИЕ DEBIAN/CHANGELOG ---
+    - name: Update Debian Changelog
+      shell: bash
+      run: |
+        git config --global safe.directory "$GITHUB_WORKSPACE"
+
+        DEB_VERSION=$(echo "${{ env.VERSION }}" | sed 's/^v//')
+        echo "Valid Debian version to use: $DEB_VERSION"
+
+        # Берем последний тег
+        LAST_TAG=$(git tag --sort=-version:refname | head -n1 || echo "")
+
+        # Собираем логи коммитов
+        if [ -n "$LAST_TAG" ]; then
+          COMMIT_LOGS=$(git log ${LAST_TAG}..HEAD --oneline | tr '\n' '; ')
+        else
+          COMMIT_LOGS=$(git log --oneline | tr '\n' '; ')
+        fi
+
+        mkdir -p debian
+        if [ ! -f debian/changelog ]; then
+          dch --create --package "dirview" -v "$DEB_VERSION" ""
+        else
+          dch -v "$DEB_VERSION" "" -b
+        fi
+
+        if [[ "${{ github.ref }}" == refs/heads/master ]]; then
+          # Если релиз - помечаем stable
+          dch -D "stable" "Automated release build. Commits: ${COMMIT_LOGS}"
+        else 
+          dch -D "unstable" "Automated pre-release build. Commits: ${COMMIT_LOGS}"
+        fi
+
+        cat debian/changelog
+
+    # --- ГЕНЕРАЦИЯ .PATCH ФАЙЛОВ ---
+    - name: Generate Patch Files
+      shell: bash
+      run: |
+        git config --global safe.directory "$GITHUB_WORKSPACE"
+
+        # Очищаем старые патчи перед генерацией новых
+        rm -rf patches/
+        mkdir -p patches/
+        
+        # Берем последний тег
+        LAST_TAG=$(git tag --sort=-version:refname | head -n1 || echo "")
+
+        if [ -n "$LAST_TAG" ]; then
+          git format-patch ${LAST_TAG}..HEAD -o debian/patches/
+        else
+          git format-patch -1 -o debian/patches/
+        fi
+        
+        # Также делаем архив для прикрепления к релизу GitHub
+        tar -czf patches.tar.gz debian/patches/
+
+    # --- КОММИТ И ПУШ CHANGELOG И ПАТЧЕЙ В РЕПОЗИТОРИЙ ПОСЛЕ МЕРДЖА ---
+    - name: Commit and Push Changelog & Patches to Master
+      if: github.ref == 'refs/heads/master'
+      shell: bash
+      run: |
+        git config --global safe.directory "$GITHUB_WORKSPACE"
+        
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@github.com'
+        
+        # Индексируем изменения
+        git add debian/changelog debian/patches/
+        
+        # Проверяем, есть ли что коммитить (чтобы избежать ошибок, если файлы не изменились)
+        if ! git diff-index --quiet HEAD; then
+          git commit -m "chore: update changelog and patches for ${{ env.VERSION }} [skip ci]"
+          git push origin master
+
+          # Проверяем, существует ли уже такой тег в репозитории
+          if ! git rev-parse "${{ env.VERSION }}" >/dev/null 2>&1; then
+            git tag "${{ env.VERSION }}"
+            git push origin tag "${{ env.VERSION }}"
+            echo "tag_created=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag ${{ env.VERSION }} already exists."
+            echo "tag_created=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "No changes in changelog or patches to commit."
+        fi
+
+    # --- СБОРКА .DEB ПАКЕТА ---
+    - name: Build Debian Package
+      shell: bash
+      run: |
+        debuild -us -uc -b -j$(nproc)
+        mv ../*.deb .
+
+    # --- СОЗДАНИЕ GitHub RELEASE И ЗАГРУЗКА АРТЕФАКТОВ ---
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.VERSION }}
+        name: Release ${{ env.VERSION }}
+        body: |
+          Automated Release.
+          The debian package and patch archive are attached.
+          See CHANGELOG.md for details.
+        draft: false
+        prerelease: ${{ steps.versioning.outputs.is_prerelease == 'true' }}
+        files: |
+          *.deb
+          patches.tar.gz

@@ -49,16 +49,15 @@
 ****************************************************************************/
 
 #include <QApplication>
-#include <QFileSystemModel>
+#include <QCommandLineOption>
+#include <QCommandLineParser>
 #include <QFileIconProvider>
+#include <QFileSystemModel>
 #include <QScreen>
 #include <QScroller>
 #include <QTreeView>
-#include <QCommandLineParser>
-#include <QCommandLineOption>
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
     QCoreApplication::setApplicationVersion(QT_VERSION_STR);
@@ -72,8 +71,7 @@ int main(int argc, char *argv[])
     parser.addOption(dontWatchOption);
     parser.addPositionalArgument("directory", "The directory to start in.");
     parser.process(app);
-    const QString rootPath = parser.positionalArguments().isEmpty()
-        ? QString() : parser.positionalArguments().first();
+    const QString rootPath = parser.positionalArguments().isEmpty() ? QString() : parser.positionalArguments().first();
 
     QFileSystemModel model;
     model.setRootPath("");
