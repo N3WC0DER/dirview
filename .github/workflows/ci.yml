@@ -13,7 +13,7 @@ jobs:
     name: Build & Lint (Astra Linux Environment)
     runs-on: ubuntu-latest
     container:
-      image: astra/ubuntu:1.7  # Исправлено имя образа
+      image: debian-latest
     
     steps:
     - name: Checkout repository
@@ -50,7 +50,7 @@ jobs:
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     container:
-      image: astra/ubuntu:1.7  # Исправлено имя образа
+      image: debian-latest
     permissions:
       contents: write
     
