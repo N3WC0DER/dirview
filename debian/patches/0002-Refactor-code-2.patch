@@ -1,0 +1,183 @@
+From 43c187d7e5c164d1eab09d57dcf8324b5db0047b Mon Sep 17 00:00:00 2001
+From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
+Date: Sun, 12 Jul 2026 15:33:39 +0400
+Subject: [PATCH 2/2] Refactor code (#2)
+
+---
+ CMakeLists.txt                   |  3 +++
+ src/main.cpp                     | 45 +++++++++-----------------------
+ src/ui/DirectoryViewerWidget.cpp | 32 +++++++++++++++++++++++
+ src/ui/DirectoryViewerWidget.h   | 24 +++++++++++++++++
+ src/utils/Options.h              |  6 +++++
+ 5 files changed, 77 insertions(+), 33 deletions(-)
+ create mode 100644 src/ui/DirectoryViewerWidget.cpp
+ create mode 100644 src/ui/DirectoryViewerWidget.h
+ create mode 100644 src/utils/Options.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c3793e8..ab75ff0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -16,6 +16,9 @@ find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+ # 3. Define source files
+ set(PROJECT_SOURCES
+     src/main.cpp
++    src/ui/DirectoryViewerWidget.cpp
++    src/ui/DirectoryViewerWidget.h
++    src/utils/Options.h
+ )
+ 
+ # 3.1 Formatting
+diff --git a/src/main.cpp b/src/main.cpp
+index ecf9ba9..5baaa17 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -56,50 +56,29 @@
+ #include <QScreen>
+ #include <QScroller>
+ #include <QTreeView>
++#include "utils/Options.h"
++#include "ui/DirectoryViewerWidget.h"
+ 
+-int main(int argc, char *argv[]) {
++auto main(int argc, char *argv[]) -> int {
+     QApplication app(argc, argv);
+ 
++    // Command line options
+     QCoreApplication::setApplicationVersion(QT_VERSION_STR);
+     QCommandLineParser parser;
+     parser.setApplicationDescription("Qt Dir View Example");
+     parser.addHelpOption();
+     parser.addVersionOption();
+-    QCommandLineOption dontUseCustomDirectoryIconsOption("c", "Set QFileSystemModel::DontUseCustomDirectoryIcons");
++    QCommandLineOption dontUseCustomDirectoryIconsOption(Options::dontUseCustomDirectoryIcons,
++        "Set QFileSystemModel::DontUseCustomDirectoryIcons");
+     parser.addOption(dontUseCustomDirectoryIconsOption);
+-    QCommandLineOption dontWatchOption("w", "Set QFileSystemModel::DontWatch");
++    QCommandLineOption dontWatchOption(Options::dontWatch,
++        "Set QFileSystemModel::DontWatch");
+     parser.addOption(dontWatchOption);
+-    parser.addPositionalArgument("directory", "The directory to start in.");
+     parser.process(app);
+-    const QString rootPath = parser.positionalArguments().isEmpty() ? QString() : parser.positionalArguments().first();
+ 
+-    QFileSystemModel model;
+-    model.setRootPath("");
+-    if (parser.isSet(dontUseCustomDirectoryIconsOption))
+-        model.setOption(QFileSystemModel::DontUseCustomDirectoryIcons);
+-    if (parser.isSet(dontWatchOption))
+-        model.setOption(QFileSystemModel::DontWatchForChanges);
+-    QTreeView tree;
+-    tree.setModel(&model);
+-    if (!rootPath.isEmpty()) {
+-        const QModelIndex rootIndex = model.index(QDir::cleanPath(rootPath));
+-        if (rootIndex.isValid())
+-            tree.setRootIndex(rootIndex);
+-    }
++    // Main window
++    DirectoryViewerWidget dirview(parser);
++    dirview.show();
+ 
+-    // Demonstrating look and feel features
+-    tree.setAnimated(false);
+-    tree.setIndentation(20);
+-    tree.setSortingEnabled(true);
+-    const QSize availableSize = tree.screen()->availableGeometry().size();
+-    tree.resize(availableSize / 2);
+-    tree.setColumnWidth(0, tree.width() / 3);
+-
+-    // Make it flickable on touchscreens
+-    QScroller::grabGesture(&tree, QScroller::TouchGesture);
+-
+-    tree.setWindowTitle(QObject::tr("Dir View"));
+-    tree.show();
+-
+-    return app.exec();
++    return QApplication::exec();
+ }
+diff --git a/src/ui/DirectoryViewerWidget.cpp b/src/ui/DirectoryViewerWidget.cpp
+new file mode 100644
+index 0000000..95b06ae
+--- /dev/null
++++ b/src/ui/DirectoryViewerWidget.cpp
+@@ -0,0 +1,32 @@
++#include "DirectoryViewerWidget.h"
++
++DirectoryViewerWidget::DirectoryViewerWidget(const QCommandLineParser &parser, QWidget *parent)
++    : QMainWindow(parent)
++{
++    model.setRootPath("");
++    if (parser.isSet(Options::dontUseCustomDirectoryIcons))
++        model.setOption(QFileSystemModel::DontUseCustomDirectoryIcons);
++    if (parser.isSet(Options::dontWatch))
++        model.setOption(QFileSystemModel::DontWatchForChanges);
++    
++    tree.setModel(&model);
++
++    // Demonstrating look and feel features
++    tree.setAnimated(false);
++    tree.setIndentation(20);
++    tree.setSortingEnabled(true);
++    tree.setColumnWidth(0, tree.width() / 3);
++
++    // Make it flickable on touchscreens
++    QScroller::grabGesture(&tree, QScroller::TouchGesture);
++
++    auto *central = new QWidget(this);
++    central->setObjectName("centralwidget");
++
++    auto *layout = new QVBoxLayout(central);
++    layout->addWidget(&tree);
++    layout->setStretchFactor(&tree, 1);
++
++    setCentralWidget(central);
++    // QFileSystemModel::setNameFilters()
++}
+\ No newline at end of file
+diff --git a/src/ui/DirectoryViewerWidget.h b/src/ui/DirectoryViewerWidget.h
+new file mode 100644
+index 0000000..822f90b
+--- /dev/null
++++ b/src/ui/DirectoryViewerWidget.h
+@@ -0,0 +1,24 @@
++#pragma once
++
++#include <QWidget>
++#include <QtWidgets>
++#include <QSizePolicy>
++#include "../utils/Options.h"
++
++/**
++ * @brief Main window
++ * 
++ */
++class DirectoryViewerWidget : public QMainWindow
++{
++    Q_OBJECT
++
++public:
++
++    explicit DirectoryViewerWidget(const QCommandLineParser &parser, QWidget *parent = nullptr);
++
++private:
++
++    QFileSystemModel model;
++    QTreeView tree;
++};
+\ No newline at end of file
+diff --git a/src/utils/Options.h b/src/utils/Options.h
+new file mode 100644
+index 0000000..9f38cf4
+--- /dev/null
++++ b/src/utils/Options.h
+@@ -0,0 +1,6 @@
++#pragma once
++
++struct Options {
++    inline static const char* dontWatch = "w";
++    inline static const char* dontUseCustomDirectoryIcons = "c";
++};
+\ No newline at end of file
+-- 
+2.54.0
+
