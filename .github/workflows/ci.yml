@@ -12,8 +12,6 @@ jobs:
   build-and-lint:
     name: Build & Lint (Astra Linux Environment)
     runs-on: ubuntu-latest
-    container:
-      image: debian:bookworm-slim
     
     steps:
     - name: Checkout repository
@@ -49,8 +47,6 @@ jobs:
     # Запускаем только если это мердж в master (push в master) ИЛИ релиз-тег
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    container:
-      image: debian:bookworm-slim
     permissions:
       contents: write
     
@@ -65,7 +61,7 @@ jobs:
         apt-get update
         apt-get install -y --no-install-recommends \
           build-essential cmake qtbase5-dev qtbase5-dev-tools git \
-          dpkg-dev debhelper devscripts fakeroot  # Добавлен fakeroot
+          dpkg-dev debhelper devscripts fakeroot
 
     # --- АВТО-ТЕГ И ОПРЕДЕЛЕНИЕ ВЕРСИИ ---
     # Если это мердж в master без тега, вычисляем версию и ставим чистый тег без -rc
@@ -94,6 +90,7 @@ jobs:
     - name: Update Debian Changelog
       shell: bash
       run: |
+        cd "$GITHUB_WORKSPACE"
         git config --global safe.directory "$GITHUB_WORKSPACE"
 
         DEB_VERSION=$(echo "${{ env.VERSION }}" | sed 's/^v//')
@@ -129,6 +126,7 @@ jobs:
     - name: Generate Patch Files
       shell: bash
       run: |
+        cd "$GITHUB_WORKSPACE"
         git config --global safe.directory "$GITHUB_WORKSPACE"
 
         # Очищаем старые патчи перед генерацией новых
@@ -152,6 +150,7 @@ jobs:
       if: github.ref == 'refs/heads/master'
       shell: bash
       run: |
+        cd "$GITHUB_WORKSPACE"
         git config --global safe.directory "$GITHUB_WORKSPACE"
         
         git config --global user.name 'github-actions[bot]'
@@ -182,6 +181,7 @@ jobs:
     - name: Build Debian Package
       shell: bash
       run: |
+        cd "$GITHUB_WORKSPACE"
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
         cmake --build build
         DESTDIR=$(pwd)/debian/dirview cmake --install build
