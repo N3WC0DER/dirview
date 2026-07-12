@@ -62,7 +62,8 @@ jobs:
         sudo apt update
         sudo apt install -y --no-install-recommends \
           build-essential cmake qtbase5-dev qtbase5-dev-tools git \
-          dpkg-dev debhelper devscripts fakeroot
+          dpkg-dev debhelper devscripts fakeroot equivs
+        sudo mk-build-deps -ri || true
 
     # --- АВТО-ТЕГ И ОПРЕДЕЛЕНИЕ ВЕРСИИ ---
     # Если это мердж в master без тега, вычисляем версию и ставим чистый тег без -rc
@@ -179,11 +180,8 @@ jobs:
     - name: Build Debian Package
       shell: bash
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-        cmake --build build
-        DESTDIR=$(pwd)/debian/dirview cmake --install build
-        
-        dpkg-deb --build debian/dirview ./dirview_${{ env.VERSION }}_amd64.deb
+        debuild -us -uc -b -j$(nproc)
+        mv ../*.deb .
 
     # --- СОЗДАНИЕ GitHub RELEASE И ЗАГРУЗКА АРТЕФАКТОВ ---
     - name: Create GitHub Release
