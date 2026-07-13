@@ -1,0 +1,26 @@
+From 226548f7a3dfcc76658148b8f4f8f5c22866674c Mon Sep 17 00:00:00 2001
+From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
+Date: Mon, 13 Jul 2026 15:19:27 +0400
+Subject: [PATCH] Version 1.3.1 (#8)
+
+* fix: folder size consider hidden files
+---
+ src/utils/CalculateSize.hpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/utils/CalculateSize.hpp b/src/utils/CalculateSize.hpp
+index 2bfe047..0bf6e08 100644
+--- a/src/utils/CalculateSize.hpp
++++ b/src/utils/CalculateSize.hpp
+@@ -11,7 +11,7 @@
+  */
+ inline quint64 getDirSize(const QString &dirPath) {
+     quint64 size = 0;
+-    QDirIterator it(dirPath, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
++    QDirIterator it(dirPath, QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden, QDirIterator::Subdirectories);
+     while (it.hasNext()) {
+         it.next();
+         size += it.fileInfo().size();
+-- 
+2.54.0
+
