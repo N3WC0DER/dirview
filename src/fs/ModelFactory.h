@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QFileSystemModel>
 #include "FilterProxyModel.h"
+#include "FolderSizeProxyModel.h"
 #include "../utils/Options.hpp"
 
 /**
@@ -32,11 +33,19 @@ public:
 
     /**
      * @brief Создаёт прокси-модель фильтрации на основе модели файловой системы.
-     * @param model Модель-источник (QFileSystemModel).
+     * @param model Модель-источник.
      * @param parent Родительский объект.
      * @return Указатель на FilterProxyModel (владелец - parent).
      */
-    FilterProxyModel* createFilterProxyModel(QFileSystemModel *model, QObject *parent);
+    FilterProxyModel* createFilterProxyModel(QAbstractItemModel *model, QObject *parent);
+
+    /**
+     * @brief Создаёт прокси-модель для отображения размеров папок.
+     * @param model Исходная модель (обычно QFileSystemModel или её прокси).
+     * @param parent Родительский объект для прокси-модели.
+     * @return Указатель на созданный FolderSizeProxyModel (владелец — parent).
+     */
+    FolderSizeProxyModel* createFolderSizeProxyModel(QAbstractItemModel *model, QObject *parent);
 
 private:
 

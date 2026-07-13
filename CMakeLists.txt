@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 2. Locate the Qt5 packages
-find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Concurrent REQUIRED)
 
 # 3. Define source files
 set(PROJECT_SOURCES
@@ -20,11 +20,14 @@ set(PROJECT_SOURCES
     src/ui/DirectoryViewerWidget.h
     src/fs/FilterProxyModel.h
     src/fs/FilterProxyModel.cpp
+    src/fs/FolderSizeProxyModel.h
+    src/fs/FolderSizeProxyModel.cpp
     src/fs/ModelFactory.h
     src/fs/ModelFactory.cpp
     src/fs/FilterController.h
     src/fs/FilterController.cpp
     src/utils/Options.hpp
+    src/utils/CalculateSize.hpp
 )
 
 # 3.1 Formatting

@@ -3,8 +3,12 @@
 #include <QWidget>
 #include <QtWidgets>
 #include <QSizePolicy>
+#include <QFuture>
+#include <QtConcurrent/qtconcurrentrun.h>
 #include "../utils/Options.hpp"
+#include "../utils/CalculateSize.hpp"
 #include "../fs/FilterProxyModel.h"
+#include "../fs/FolderSizeProxyModel.h"
 #include "../fs/FilterController.h"
 #include "../fs/ModelFactory.h"
 
@@ -30,7 +34,8 @@ private:
 
     QLineEdit *filter;
     QFileSystemModel *model;
-    FilterProxyModel *proxyModel;
+    FolderSizeProxyModel *folderSizeProxyModel;
+    FilterProxyModel *filterProxyModel;
     QTreeView *tree;
 
     inline static const QSize BASE_SIZE = QSize(1000, 600);
@@ -38,6 +43,13 @@ private:
     inline static const QString rootPath = QDir::homePath();
 
     void configureTreeView();
+
+    /**
+     * @brief Запускает асинхронную функцию расчета общего размера файлов в указанной директории.
+     * Передает результат в прокси модель folderSizeProxyModel.
+     * @param folderPath Путь к папке.
+     */
+    void calculateFolderSize(const QString &folderPath);
 
 private slots:
 
@@ -47,4 +59,12 @@ private slots:
      * @param loadedPath Путь к директории.
      */
     void setHomeDirectory(const QString &loadedPath);
+
+    /**
+     * @brief Вызывает контекстное меню при нажатии ПКМ на папку.
+     * Есть возможность рассчитать размер папки.
+     * 
+     * @param point 
+     */
+    void onDirContextMenuRequested(const QPoint &point);
 };

@@ -18,10 +18,15 @@ QFileSystemModel *ModelFactory::createFileSystemModel(const QString &rootPath, Q
     return model;
 }
 
-FilterProxyModel *ModelFactory::createFilterProxyModel(QFileSystemModel *model, QObject *parent) {
+FilterProxyModel *ModelFactory::createFilterProxyModel(QAbstractItemModel *model, QObject *parent) {
     auto *proxyModel = new FilterProxyModel(parent);
     proxyModel->setSourceModel(model);
     proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
-    proxyModel->setProxyRootPath(model->rootPath());
+    return proxyModel;
+}
+
+FolderSizeProxyModel *ModelFactory::createFolderSizeProxyModel(QAbstractItemModel *model, QObject *parent) {
+    auto *proxyModel = new FolderSizeProxyModel(parent);
+    proxyModel->setSourceModel(model);
     return proxyModel;
 }
