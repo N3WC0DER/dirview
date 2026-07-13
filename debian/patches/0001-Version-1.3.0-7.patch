@@ -1,0 +1,412 @@
+From ef2e5f1a232b491277d748ba7b0f8061feed087c Mon Sep 17 00:00:00 2001
+From: Savkin Nikita <50752617+N3WC0DER@users.noreply.github.com>
+Date: Mon, 13 Jul 2026 13:50:27 +0400
+Subject: [PATCH] Version 1.3.0 (#7)
+
+* feat: calculate folder size in context menu
+---
+ CMakeLists.txt                   |  5 ++-
+ src/fs/FilterProxyModel.h        |  2 +-
+ src/fs/FolderSizeProxyModel.cpp  | 53 +++++++++++++++++++++++++++++
+ src/fs/FolderSizeProxyModel.h    | 48 +++++++++++++++++++++++++++
+ src/fs/ModelFactory.cpp          |  9 +++--
+ src/fs/ModelFactory.h            | 13 ++++++--
+ src/ui/DirectoryViewerWidget.cpp | 57 +++++++++++++++++++++++++++++---
+ src/ui/DirectoryViewerWidget.h   | 22 +++++++++++-
+ src/utils/CalculateSize.hpp      | 20 +++++++++++
+ 9 files changed, 218 insertions(+), 11 deletions(-)
+ create mode 100644 src/fs/FolderSizeProxyModel.cpp
+ create mode 100644 src/fs/FolderSizeProxyModel.h
+ create mode 100644 src/utils/CalculateSize.hpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 87f3755..af4ba27 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
+ # 2. Locate the Qt5 packages
+-find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
++find_package(Qt5 COMPONENTS Core Gui Widgets Concurrent REQUIRED)
+ 
+ # 3. Define source files
+ set(PROJECT_SOURCES
+@@ -20,11 +20,14 @@ set(PROJECT_SOURCES
+     src/ui/DirectoryViewerWidget.h
+     src/fs/FilterProxyModel.h
+     src/fs/FilterProxyModel.cpp
++    src/fs/FolderSizeProxyModel.h
++    src/fs/FolderSizeProxyModel.cpp
+     src/fs/ModelFactory.h
+     src/fs/ModelFactory.cpp
+     src/fs/FilterController.h
+     src/fs/FilterController.cpp
+     src/utils/Options.hpp
++    src/utils/CalculateSize.hpp
+ )
+ 
+ # 3.1 Formatting
+diff --git a/src/fs/FilterProxyModel.h b/src/fs/FilterProxyModel.h
+index b0ff1bb..1194f31 100644
+--- a/src/fs/FilterProxyModel.h
++++ b/src/fs/FilterProxyModel.h
+@@ -23,7 +23,7 @@ protected:
+ 
+ private:
+ 
+-    /** Храним путь корня для фиксирования независимо от фильтра */
++    /** Путь корня для фиксирования независимо от фильтра */
+     QString rootPath;
+ 
+     /**
+diff --git a/src/fs/FolderSizeProxyModel.cpp b/src/fs/FolderSizeProxyModel.cpp
+new file mode 100644
+index 0000000..d3f1a3e
+--- /dev/null
++++ b/src/fs/FolderSizeProxyModel.cpp
+@@ -0,0 +1,53 @@
++#include "FolderSizeProxyModel.h"
++
++FolderSizeProxyModel::FolderSizeProxyModel(QObject *parent) : QIdentityProxyModel(parent) { }
++
++void FolderSizeProxyModel::updateFolderSize(const QString &path, quint64 size) {
++    sizesCache[path] = size;
++    
++    // Обновляем колонку с размером
++    auto filterProxyModel = qobject_cast<FilterProxyModel*>(sourceModel());
++    if (!filterProxyModel) return;
++
++    auto fsModel = qobject_cast<QFileSystemModel*>(filterProxyModel->sourceModel());
++    if (!fsModel) return;
++
++    QModelIndex srcIndex = fsModel->index(path);
++    QModelIndex srcSizeIndex = fsModel->index(srcIndex.row(), 1, srcIndex.parent());
++    QModelIndex filterProxyIndex = filterProxyModel->mapFromSource(srcSizeIndex);
++    QModelIndex proxyIndex = mapFromSource(filterProxyIndex);
++    
++    emit dataChanged(proxyIndex, proxyIndex, {Qt::DisplayRole});
++}
++
++QVariant FolderSizeProxyModel::data(const QModelIndex &proxyIndex, int role) const {
++    if (!proxyIndex.isValid()) return QVariant();
++
++    if (proxyIndex.column() == 1 && role == Qt::DisplayRole) {
++        auto filterProxyModel = qobject_cast<FilterProxyModel*>(sourceModel());
++        if (filterProxyModel) {
++            auto fsModel = qobject_cast<QFileSystemModel*>(filterProxyModel->sourceModel());
++            if (fsModel) {
++                QModelIndex filterProxyIndex = mapToSource(proxyIndex);
++                QModelIndex srcIndex = filterProxyModel->mapToSource(filterProxyIndex);
++                QString path = fsModel->filePath(srcIndex);
++                
++                if (fsModel->isDir(srcIndex) && sizesCache.contains(path)) {
++                    return formatSize(sizesCache[path]);
++                }
++            }
++        }
++    }
++    return QIdentityProxyModel::data(proxyIndex, role);
++}
++
++QString FolderSizeProxyModel::formatSize(quint64 bytes) {
++    QStringList units = {tr("Б"), tr("КБ"), tr("МБ"), tr("ГБ"), tr("ТБ")};
++    double size = bytes;
++    int unitIndex = 0;
++    while (size >= 1024 && unitIndex < units.size() - 1) {
++        size /= 1024;
++        unitIndex++;
++    }
++    return QString("%1 %2").arg(size, 0, 'f', 1).arg(units[unitIndex]);
++}
+\ No newline at end of file
+diff --git a/src/fs/FolderSizeProxyModel.h b/src/fs/FolderSizeProxyModel.h
+new file mode 100644
+index 0000000..6a26d8c
+--- /dev/null
++++ b/src/fs/FolderSizeProxyModel.h
+@@ -0,0 +1,48 @@
++#pragma once
++
++#include <QFileSystemModel>
++#include <QIdentityProxyModel>
++#include <QHash>
++#include <QDebug>
++#include "FilterProxyModel.h"
++
++/**
++ * @brief Прокси-модель для отображения размера папок.
++ * 
++ * Кэширует вычисленные размеры папок и подставляет их в данные модели
++ * для роли Qt::DisplayRole. Размеры форматируются в удобочитаемый вид.
++ */
++class FolderSizeProxyModel : public QIdentityProxyModel {
++    Q_OBJECT
++public:
++
++    explicit FolderSizeProxyModel(QObject *parent = nullptr);
++
++    /**
++     * @brief Обновляет кэш размера для указанной папки и отправляет сигнал для обновления колонки.
++     * @param path Путь к папке.
++     * @param size Размер в байтах.
++     */
++    void updateFolderSize(const QString &path, quint64 size);
++
++    /**
++     * @brief Переопределённый метод доступа к данным.
++     * 
++     * Если роль Qt::DisplayRole и индекс соответствует колонке с размером,
++     * возвращает отформатированную строку размера из кэша.
++     * В остальных случаях делегирует родительской модели.
++     */
++    QVariant data(const QModelIndex &proxyIndex, int role = Qt::DisplayRole) const override;
++
++private:
++
++    /** Кэш размеров папок (путь -> размер в байтах). */
++    QHash<QString, quint64> sizesCache;
++
++    /**
++     * @brief Преобразует размер в байтах в читаемую строку (например, "1.2 МБ").
++     * @param bytes Размер в байтах.
++     * @return Отформатированная строка.
++     */
++    static QString formatSize(quint64 bytes);
++};
+\ No newline at end of file
+diff --git a/src/fs/ModelFactory.cpp b/src/fs/ModelFactory.cpp
+index 0154fa0..c825a8d 100644
+--- a/src/fs/ModelFactory.cpp
++++ b/src/fs/ModelFactory.cpp
+@@ -18,10 +18,15 @@ QFileSystemModel *ModelFactory::createFileSystemModel(const QString &rootPath, Q
+     return model;
+ }
+ 
+-FilterProxyModel *ModelFactory::createFilterProxyModel(QFileSystemModel *model, QObject *parent) {
++FilterProxyModel *ModelFactory::createFilterProxyModel(QAbstractItemModel *model, QObject *parent) {
+     auto *proxyModel = new FilterProxyModel(parent);
+     proxyModel->setSourceModel(model);
+     proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+-    proxyModel->setProxyRootPath(model->rootPath());
+     return proxyModel;
+ }
++
++FolderSizeProxyModel *ModelFactory::createFolderSizeProxyModel(QAbstractItemModel *model, QObject *parent) {
++    auto *proxyModel = new FolderSizeProxyModel(parent);
++    proxyModel->setSourceModel(model);
++    return proxyModel;
++}
+\ No newline at end of file
+diff --git a/src/fs/ModelFactory.h b/src/fs/ModelFactory.h
+index f98a6fa..536fde1 100644
+--- a/src/fs/ModelFactory.h
++++ b/src/fs/ModelFactory.h
+@@ -3,6 +3,7 @@
+ #include <QObject>
+ #include <QFileSystemModel>
+ #include "FilterProxyModel.h"
++#include "FolderSizeProxyModel.h"
+ #include "../utils/Options.hpp"
+ 
+ /**
+@@ -32,11 +33,19 @@ public:
+ 
+     /**
+      * @brief Создаёт прокси-модель фильтрации на основе модели файловой системы.
+-     * @param model Модель-источник (QFileSystemModel).
++     * @param model Модель-источник.
+      * @param parent Родительский объект.
+      * @return Указатель на FilterProxyModel (владелец - parent).
+      */
+-    FilterProxyModel* createFilterProxyModel(QFileSystemModel *model, QObject *parent);
++    FilterProxyModel* createFilterProxyModel(QAbstractItemModel *model, QObject *parent);
++
++    /**
++     * @brief Создаёт прокси-модель для отображения размеров папок.
++     * @param model Исходная модель (обычно QFileSystemModel или её прокси).
++     * @param parent Родительский объект для прокси-модели.
++     * @return Указатель на созданный FolderSizeProxyModel (владелец — parent).
++     */
++    FolderSizeProxyModel* createFolderSizeProxyModel(QAbstractItemModel *model, QObject *parent);
+ 
+ private:
+ 
+diff --git a/src/ui/DirectoryViewerWidget.cpp b/src/ui/DirectoryViewerWidget.cpp
+index f6e901a..41c88bc 100644
+--- a/src/ui/DirectoryViewerWidget.cpp
++++ b/src/ui/DirectoryViewerWidget.cpp
+@@ -8,7 +8,9 @@ DirectoryViewerWidget::DirectoryViewerWidget(const Options &options, QWidget *pa
+     // file models
+     ModelFactory modelFactory(options);
+     model = modelFactory.createFileSystemModel(rootPath, this);
+-    proxyModel = modelFactory.createFilterProxyModel(model, this);
++    filterProxyModel = modelFactory.createFilterProxyModel(model, this);
++    filterProxyModel->setProxyRootPath(model->rootPath());
++    folderSizeProxyModel = modelFactory.createFolderSizeProxyModel(filterProxyModel, this);
+ 
+     // Set home directory after loading
+     connect(model, &QFileSystemModel::directoryLoaded,
+@@ -24,7 +26,7 @@ DirectoryViewerWidget::DirectoryViewerWidget(const Options &options, QWidget *pa
+     // Filter line
+     filter = new QLineEdit(this);
+     filter->setPlaceholderText(tr("Фильтр"));
+-    auto *filterController = new FilterController(proxyModel, filter, this);
++    auto *filterController = new FilterController(filterProxyModel, filter, this);
+     layout->addWidget(filter);
+ 
+     configureTreeView();
+@@ -37,18 +39,65 @@ DirectoryViewerWidget::DirectoryViewerWidget(const Options &options, QWidget *pa
+ 
+ void DirectoryViewerWidget::configureTreeView() {
+     tree = new QTreeView(this);
+-    tree->setModel(proxyModel);
++    tree->setModel(folderSizeProxyModel);
+ 
+     tree->setSortingEnabled(true);
+     tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+     tree->header()->setSectionResizeMode(1, QHeaderView::Interactive);
++
++    tree->setContextMenuPolicy(Qt::CustomContextMenu);
++
++    connect(tree, &QTreeView::customContextMenuRequested,
++        this, &DirectoryViewerWidget::onDirContextMenuRequested);
++}
++
++void DirectoryViewerWidget::calculateFolderSize(const QString &folderPath) {
++    QFuture<quint64> future = QtConcurrent::run(getDirSize, folderPath);
++            
++    auto *watcher = new QFutureWatcher<quint64>(this);
++    connect(watcher, &QFutureWatcher<quint64>::finished, this, [this, watcher, folderPath]() {
++        quint64 totalSize = watcher->result();
++        
++        folderSizeProxyModel->updateFolderSize(folderPath, totalSize);
++        
++        watcher->deleteLater();
++    });
++    watcher->setFuture(future);
+ }
+ 
+ void DirectoryViewerWidget::setHomeDirectory(const QString &loadedPath) {
+     if (loadedPath == rootPath) {
+         QModelIndex rootIndex = model->index(loadedPath);
+         if (rootIndex.isValid()) {
+-            tree->setRootIndex(proxyModel->mapFromSource(rootIndex));
++            QModelIndex filterProxyIndex = filterProxyModel->mapFromSource(rootIndex);
++            QModelIndex folderSizeProxyIndex = folderSizeProxyModel->mapFromSource(filterProxyIndex);
++            tree->setRootIndex(folderSizeProxyIndex);
++        }
++    }
++}
++
++void DirectoryViewerWidget::onDirContextMenuRequested(const QPoint &point) {
++    QModelIndex folderSizeProxyIndex = tree->indexAt(point);
++    if (!folderSizeProxyIndex.isValid()) return;
++
++    QModelIndex filterProxyIndex = folderSizeProxyModel->mapToSource(folderSizeProxyIndex);
++    if (!filterProxyIndex.isValid()) return;
++
++    QModelIndex index = filterProxyModel->mapToSource(filterProxyIndex);
++    if(!index.isValid()) return;
++
++    QString absolutePath = model->filePath(index);
++    QFileInfo fileInfo(absolutePath);
++
++    // Контекстное меню для директории
++    if (fileInfo.isDir()) {
++        QMenu contextMenu(this);
++        QAction *calculateDirSize = contextMenu.addAction(tr("Вычислить размер папки"));
++
++        QAction *selectedAction = contextMenu.exec(tree->viewport()->mapToGlobal(point));
++
++        if (selectedAction == calculateDirSize) {
++            calculateFolderSize(absolutePath);
+         }
+     }
+ }
+\ No newline at end of file
+diff --git a/src/ui/DirectoryViewerWidget.h b/src/ui/DirectoryViewerWidget.h
+index 2d3e21f..a860a8a 100644
+--- a/src/ui/DirectoryViewerWidget.h
++++ b/src/ui/DirectoryViewerWidget.h
+@@ -3,8 +3,12 @@
+ #include <QWidget>
+ #include <QtWidgets>
+ #include <QSizePolicy>
++#include <QFuture>
++#include <QtConcurrent/qtconcurrentrun.h>
+ #include "../utils/Options.hpp"
++#include "../utils/CalculateSize.hpp"
+ #include "../fs/FilterProxyModel.h"
++#include "../fs/FolderSizeProxyModel.h"
+ #include "../fs/FilterController.h"
+ #include "../fs/ModelFactory.h"
+ 
+@@ -30,7 +34,8 @@ private:
+ 
+     QLineEdit *filter;
+     QFileSystemModel *model;
+-    FilterProxyModel *proxyModel;
++    FolderSizeProxyModel *folderSizeProxyModel;
++    FilterProxyModel *filterProxyModel;
+     QTreeView *tree;
+ 
+     inline static const QSize BASE_SIZE = QSize(1000, 600);
+@@ -39,6 +44,13 @@ private:
+ 
+     void configureTreeView();
+ 
++    /**
++     * @brief Запускает асинхронную функцию расчета общего размера файлов в указанной директории.
++     * Передает результат в прокси модель folderSizeProxyModel.
++     * @param folderPath Путь к папке.
++     */
++    void calculateFolderSize(const QString &folderPath);
++
+ private slots:
+ 
+     /**
+@@ -47,4 +59,12 @@ private slots:
+      * @param loadedPath Путь к директории.
+      */
+     void setHomeDirectory(const QString &loadedPath);
++
++    /**
++     * @brief Вызывает контекстное меню при нажатии ПКМ на папку.
++     * Есть возможность рассчитать размер папки.
++     * 
++     * @param point 
++     */
++    void onDirContextMenuRequested(const QPoint &point);
+ };
+\ No newline at end of file
+diff --git a/src/utils/CalculateSize.hpp b/src/utils/CalculateSize.hpp
+new file mode 100644
+index 0000000..2bfe047
+--- /dev/null
++++ b/src/utils/CalculateSize.hpp
+@@ -0,0 +1,20 @@
++#pragma once
++
++#include <QDirIterator>
++
++/**
++ * @brief Получает общий размер файлов в указанной директории.
++ * Рекомендуется выполнять асинхронно.
++ * 
++ * @param dirPath Путь до папки.
++ * @return quint64 Размер папки.
++ */
++inline quint64 getDirSize(const QString &dirPath) {
++    quint64 size = 0;
++    QDirIterator it(dirPath, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
++    while (it.hasNext()) {
++        it.next();
++        size += it.fileInfo().size();
++    }
++    return size;
++}
+\ No newline at end of file
+-- 
+2.54.0
+

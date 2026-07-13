@@ -1,3 +1,9 @@
+dirview (1.3.0) stable; urgency=medium
+
+  * Automated release build. Commits: ef2e5f1 Version 1.3.0 (#7);
+
+ -- MAINTAINER <runner@runnervm5mmn9.vsoxzmtxsdeurpzjwrm41yeogh.phxx.internal.cloudapp.net>  Mon, 13 Jul 2026 09:54:01 +0000
+
 dirview (1.2.0) stable; urgency=medium
 
   * Automated release build. Commits: 1f63a1e Version 1.2.0 (#6);
