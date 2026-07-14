@@ -17,7 +17,7 @@
 ```mermaid
 block
   columns 2
-  treeview["QTreeView"]
+  fsModel["QFileSystemModel"]
   space:2
   filterController["FilterController"]:1
   space:2
@@ -27,15 +27,13 @@ block
   folderSizeProxy["FolderSizeProxyModel"]
   space:1
   space:2
-  fsModel["QFileSystemModel"]
+  treeview["QTreeView"]
 
-  treeview --- filterProxy
-  filterProxy --- treeview
+  fsModel --- filterProxy
   filterProxy --- folderSizeProxy
   filterController-- "Строка фильтрации"  -->filterProxy
-  folderSizeProxy --- filterProxy
-  folderSizeProxy --- fsModel
-  fsModel --- folderSizeProxy
+  folderSizeProxy --- treeview
+  treeview --- folderSizeProxy
   
 
   style treeview fill:#ffe0b2,stroke:#fb8c00
@@ -44,11 +42,11 @@ block
   style fsModel fill:#ffe0b2,stroke:#fb8c00
 ```
 
-- **QTreeView**: Отображение в окне файлового дерева, полученного от `FilterProxyModel`.
-- **FilterProxyModel**: Фильтрация папок и файлов по имени, полученных от `FolderSizeProxy`. `FilterController` задает строку, по которой нужно фильтровать.
-- **FilterController**: При обновлении строки фильтра в окне обновляет фильтр в прокси-модели.
-- **FolderSizeProxy**: Отображение размера папки. Обновляет колонку после вызова функции "Вычислить размер папки" из контекстного меню. Получает файловую структуру из `QFileSystemModel`.
 - **QFileSystemModel**: Стандартный класс для получения модели файловой структуры.
+- **FilterProxyModel**: Фильтрация папок и файлов по имени, полученных от `QFileSystemModel`. `FilterController` задает строку, по которой нужно фильтровать.
+- **FilterController**: При обновлении строки фильтра в окне обновляет фильтр в прокси-модели.
+- **FolderSizeProxy**: Отображение размера папки. Обновляет колонку после вызова функции "Вычислить размер папки" из контекстного меню. Получает файловую структуру из `FilterProxyModel`.
+- **QTreeView**: Отображение в окне файлового дерева, полученного от `FolderSizeProxy`.
 
 Почему так? Модульная структура и разделение ответственности.
 
